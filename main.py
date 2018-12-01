@@ -86,8 +86,8 @@ def alternating_training(training_pi, vs_pi, who_is_training:str, name:str):
 if __name__ == '__main__':
     env = Game(5, 5)
 
-    pi_g = PPOPolicy('ge', log_path='model/policy_for_g/logs')
-    pi_f = PPOPolicy('fe', log_path='model/policy_for_f/logs')
+    pi_g = PPOPolicy(log_path='model/policy_for_g/logs')
+    pi_f = PPOPolicy(log_path='model/policy_for_f/logs')
     pi_e = ExpertPolicy(0.15)
 
     alternating_training(training_pi=pi_f, vs_pi=pi_e, who_is_training='f',name='fevse')

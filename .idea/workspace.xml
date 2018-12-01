@@ -2,21 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1d3996ab-9c9e-4a28-8ee1-f40fa85386f9" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/GameOfMAXO.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/BasePolicy.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ComPolicyScript.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ExpertPolicy.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/GameEnv.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/MixPolicy.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/PPOPolicy.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/RandomPolicy.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/script/GenerateBase.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/script/ppo_training_process.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/script/ComPolicyScript.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PPOPolicy.py" beforeDir="false" afterPath="$PROJECT_DIR$/PPOPolicy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/policy_for_f/logs/events.out.tfevents.1543658990.forexperiments" beforeDir="false" afterPath="$PROJECT_DIR$/model/policy_for_f/logs/events.out.tfevents.1543658990.forexperiments" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/policy_for_f/readme.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/policy_for_g/logs/events.out.tfevents.1543658745.forexperiments" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/policy_for_g/logs/events.out.tfevents.1543658759.forexperiments" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/policy_for_g/logs/events.out.tfevents.1543658989.forexperiments" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/policy_for_g/readme.txt" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -25,7 +20,8 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/GameOfMAXO$BasePolicy.coverage" NAME="BasePolicy Coverage Results" MODIFIED="1543384729486" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/GameOfMAXO$BasePolicy.coverage" NAME="BasePolicy Coverage Results" MODIFIED="1543663911527" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/GameOfMAXO$RandomPolicy.coverage" NAME="RandomPolicy Coverage Results" MODIFIED="1543665353845" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/GameOfMAXO$ComPolicyScript.coverage" NAME="ComPolicyScript Coverage Results" MODIFIED="1543658150148" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/GameOfMAXO$Base_Policy.coverage" NAME="Base Policy Coverage Results" MODIFIED="1543306012622" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/GameOfMAXO$main.coverage" NAME="main Coverage Results" MODIFIED="1543658987866" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
@@ -62,7 +58,7 @@
           <entry key="jpg" value="15" />
           <entry key="model name" value="1" />
           <entry key="pstat" value="1" />
-          <entry key="py" value="26" />
+          <entry key="py" value="30" />
           <entry key="py___jb_tmp___" value="1" />
           <entry key="readme" value="3" />
           <entry key="txt" value="8" />
@@ -73,14 +69,14 @@
           <entry key="Image" value="15" />
           <entry key="PLAIN_TEXT" value="21" />
           <entry key="Profiler Session" value="1" />
-          <entry key="Python" value="26" />
+          <entry key="Python" value="30" />
           <entry key="XML" value="3" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
           <entry key="model name" value="216" />
-          <entry key="py" value="12253" />
+          <entry key="py" value="12581" />
           <entry key="readme" value="4" />
           <entry key="txt" value="212" />
         </counts>
@@ -88,7 +84,7 @@
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="428" />
-          <entry key="Python" value="12253" />
+          <entry key="Python" value="12581" />
           <entry key="XML" value="4" />
         </counts>
       </usages-collector>
@@ -99,8 +95,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/GameEnv.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2001">
-              <caret line="87" column="33" selection-start-line="87" selection-start-column="33" selection-end-line="87" selection-end-column="33" />
+            <state relative-caret-position="3036">
+              <caret line="135" selection-end-line="135" />
               <folding>
                 <marker date="1543318304039" expanded="true" signature="168:169" ph="..." />
                 <marker date="1543318304039" expanded="true" signature="718:913" ph="..." />
@@ -117,8 +113,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1094">
-              <caret line="89" column="24" selection-start-line="89" selection-start-column="24" selection-end-line="89" selection-end-column="24" />
+            <state relative-caret-position="437">
+              <caret line="88" column="21" selection-start-line="88" selection-start-column="21" selection-end-line="88" selection-end-column="21" />
               <folding>
                 <element signature="e#181#190#0" expanded="true" />
               </folding>
@@ -126,41 +122,53 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/ComPolicyScript.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="184">
-              <caret line="12" column="9" selection-start-line="12" selection-start-column="9" selection-end-line="12" selection-end-column="9" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/PPOPolicy.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="400">
-              <caret line="319" column="36" lean-forward="true" selection-start-line="319" selection-start-column="36" selection-end-line="319" selection-end-column="36" />
+            <state relative-caret-position="-146">
+              <caret line="20" column="39" lean-forward="true" selection-start-line="20" selection-start-column="39" selection-end-line="20" selection-end-column="39" />
               <folding>
-                <marker date="1543658987819" expanded="true" signature="14717:14804" ph="..." />
+                <element signature="e#70#94#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/model/policy_for_g/readme.txt">
+        <entry file="file://$PROJECT_DIR$/PPOPolicy.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="115">
-              <caret line="5" column="61" selection-start-line="5" selection-start-column="61" selection-end-line="5" selection-end-column="61" />
+            <state relative-caret-position="245">
+              <caret line="306" column="42" selection-start-line="306" selection-start-column="42" selection-end-line="306" selection-end-column="42" />
+              <folding>
+                <marker date="1543664559469" expanded="true" signature="14684:14771" ph="..." />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file:///usr/local/lib/python3.6/dist-packages/tensorflow/python/training/saver.py">
+        <entry file="file://$PROJECT_DIR$/script/ComPolicyScript.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="34500">
-              <caret line="1538" selection-start-line="1538" selection-end-line="1538" />
+            <state relative-caret-position="-184">
+              <caret line="11" lean-forward="true" selection-start-line="11" selection-end-line="11" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/ExpertPolicy.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="155">
+              <caret line="67" selection-start-line="67" selection-end-line="67" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/BasePolicy.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="322">
+              <caret line="14" lean-forward="true" selection-start-line="14" selection-end-line="14" />
             </state>
           </provider>
         </entry>
@@ -168,8 +176,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/RandomPolicy.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="115">
-              <caret line="5" column="35" selection-start-line="5" selection-start-column="35" selection-end-line="5" selection-end-column="35" />
+            <state relative-caret-position="230">
+              <caret line="10" lean-forward="true" selection-start-line="10" selection-end-line="10" />
               <folding>
                 <element signature="e#0#13#0" expanded="true" />
               </folding>
@@ -227,22 +235,22 @@
         <option value="$PROJECT_DIR$/policy.py" />
         <option value="$PROJECT_DIR$/New Policy.py" />
         <option value="$PROJECT_DIR$/Base Policy.py" />
-        <option value="$PROJECT_DIR$/RandomPolicy.py" />
         <option value="$PROJECT_DIR$/GameEnv.py" />
         <option value="$PROJECT_DIR$/Agent.py" />
         <option value="$PROJECT_DIR$/ExpertPolicy.py" />
         <option value="$PROJECT_DIR$/ppo_training_process.py" />
         <option value="$PROJECT_DIR$/GenerateBase.py" />
         <option value="$PROJECT_DIR$/script/GenerateBase.py" />
-        <option value="$PROJECT_DIR$/BasePolicy.py" />
         <option value="$PROJECT_DIR$/model/policy_for_g/model name" />
         <option value="$PROJECT_DIR$/model/policy_for_g/readme" />
         <option value="$PROJECT_DIR$/model/policy_for_f/readme.txt" />
         <option value="$PROJECT_DIR$/model/policy_for_g/readme.txt" />
         <option value="$PROJECT_DIR$/script/ComPolicyScript.py" />
         <option value="$PROJECT_DIR$/ComPolicyScript.py" />
-        <option value="$PROJECT_DIR$/main.py" />
         <option value="$PROJECT_DIR$/PPOPolicy.py" />
+        <option value="$PROJECT_DIR$/RandomPolicy.py" />
+        <option value="$PROJECT_DIR$/BasePolicy.py" />
+        <option value="$PROJECT_DIR$/main.py" />
       </list>
     </option>
   </component>
@@ -303,6 +311,9 @@
     <property name="settings.editor.selected.configurable" value="vcs.Git" />
   </component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/script" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/script" />
@@ -323,58 +334,14 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.main">
-    <configuration name="Agent" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <module name="GameOfMAXO" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-        <env name="LD_LIBRARY_PATH" value="/usr/local/cuda/lib64:$LD_LIBRARY_PATH" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Agent.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="Base Policy" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <module name="GameOfMAXO" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Base Policy.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
+  <component name="RunManager" selected="Python.RandomPolicy">
     <configuration name="BasePolicy" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="GameOfMAXO" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="LD_LIBRARY_PATH" value="/usr/local/cuda/lib64:$LD_LIBRARY_PATH" />
       </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
@@ -414,10 +381,33 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="RandomPolicy" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="GameOfMAXO" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="LD_LIBRARY_PATH" value="/usr/local/cuda/lib64:$LD_LIBRARY_PATH" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/RandomPolicy.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="GameOfMAXO" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="false" />
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
         <env name="LD_LIBRARY_PATH" value="/usr/local/cuda/lib64:$LD_LIBRARY_PATH" />
@@ -438,19 +428,17 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.Agent" />
-      <item itemvalue="Python.Base Policy" />
       <item itemvalue="Python.BasePolicy" />
       <item itemvalue="Python.main" />
       <item itemvalue="Python.ComPolicyScript" />
+      <item itemvalue="Python.RandomPolicy" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.RandomPolicy" />
+        <item itemvalue="Python.BasePolicy" />
         <item itemvalue="Python.main" />
         <item itemvalue="Python.ComPolicyScript" />
-        <item itemvalue="Python.BasePolicy" />
-        <item itemvalue="Python.Base Policy" />
-        <item itemvalue="Python.Agent" />
       </list>
     </recent_temporary>
   </component>
@@ -469,9 +457,8 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="65" y="-4" width="1855" height="1084" extended-state="6" />
-    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.2111664" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2111664" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Docker" order="0" show_stripe_button="false" />
@@ -481,11 +468,11 @@
       <window_info anchor="bottom" id="Event Log" order="4" sideWeight="0.5002764" side_tool="true" weight="0.37995824" />
       <window_info anchor="bottom" id="Message" order="5" />
       <window_info anchor="bottom" id="Find" order="6" weight="0.32985386" />
-      <window_info active="true" anchor="bottom" id="Run" order="7" sideWeight="0.4997236" visible="true" weight="0.23221758" />
+      <window_info anchor="bottom" id="Run" order="7" sideWeight="0.4997236" visible="true" weight="0.23221758" />
       <window_info anchor="bottom" id="Debug" order="8" weight="0.39979124" />
       <window_info anchor="bottom" id="Cvs" order="9" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="10" weight="0.4" />
-      <window_info anchor="bottom" id="Terminal" order="11" weight="0.32881" />
+      <window_info anchor="bottom" id="Terminal" order="11" weight="0.32845187" />
       <window_info anchor="bottom" id="TODO" order="12" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -553,20 +540,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/ExpertPolicy.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="39">
-          <caret line="67" selection-start-line="67" selection-end-line="67" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/BasePolicy.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="322">
-          <caret line="14" selection-start-line="14" selection-end-line="14" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/MixPolicy.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -611,22 +584,6 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/basepolicy-vs-fe.jpg" />
-    <entry file="file://$PROJECT_DIR$/GameEnv.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2001">
-          <caret line="87" column="33" selection-start-line="87" selection-start-column="33" selection-end-line="87" selection-end-column="33" />
-          <folding>
-            <marker date="1543318304039" expanded="true" signature="168:169" ph="..." />
-            <marker date="1543318304039" expanded="true" signature="718:913" ph="..." />
-            <marker date="1543318304039" expanded="true" signature="942:1344" ph="..." />
-            <marker date="1543318304039" expanded="true" signature="1379:1738" ph="..." />
-            <marker date="1543318304039" expanded="true" signature="1767:2281" ph="..." />
-            <marker date="1543318304039" expanded="true" signature="2316:2607" ph="..." />
-            <marker date="1543318304039" expanded="true" signature="2601:2602" ph="..." />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///usr/local/lib/python3.6/dist-packages/tensorflow/python/training/saver.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="34500">
@@ -641,13 +598,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/RandomPolicy.py">
+    <entry file="file://$PROJECT_DIR$/ExpertPolicy.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="115">
-          <caret line="5" column="35" selection-start-line="5" selection-start-column="35" selection-end-line="5" selection-end-column="35" />
-          <folding>
-            <element signature="e#0#13#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="155">
+          <caret line="67" selection-start-line="67" selection-end-line="67" />
         </state>
       </provider>
     </entry>
@@ -665,29 +619,72 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/GameEnv.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3036">
+          <caret line="135" selection-end-line="135" />
+          <folding>
+            <marker date="1543318304039" expanded="true" signature="168:169" ph="..." />
+            <marker date="1543318304039" expanded="true" signature="718:913" ph="..." />
+            <marker date="1543318304039" expanded="true" signature="942:1344" ph="..." />
+            <marker date="1543318304039" expanded="true" signature="1379:1738" ph="..." />
+            <marker date="1543318304039" expanded="true" signature="1767:2281" ph="..." />
+            <marker date="1543318304039" expanded="true" signature="2316:2607" ph="..." />
+            <marker date="1543318304039" expanded="true" signature="2601:2602" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/RandomPolicy.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="230">
+          <caret line="10" lean-forward="true" selection-start-line="10" selection-end-line="10" />
+          <folding>
+            <element signature="e#0#13#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/BasePolicy.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="322">
+          <caret line="14" lean-forward="true" selection-start-line="14" selection-end-line="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/PPOPolicy.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="245">
+          <caret line="306" column="42" selection-start-line="306" selection-start-column="42" selection-end-line="306" selection-end-column="42" />
+          <folding>
+            <marker date="1543664559469" expanded="true" signature="14684:14771" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1094">
-          <caret line="89" column="24" selection-start-line="89" selection-start-column="24" selection-end-line="89" selection-end-column="24" />
+        <state relative-caret-position="437">
+          <caret line="88" column="21" selection-start-line="88" selection-start-column="21" selection-end-line="88" selection-end-column="21" />
           <folding>
             <element signature="e#181#190#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/ComPolicyScript.py">
+    <entry file="file://$PROJECT_DIR$/script/ComPolicyScript.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="184">
-          <caret line="12" column="9" selection-start-line="12" selection-start-column="9" selection-end-line="12" selection-end-column="9" />
+        <state relative-caret-position="-184">
+          <caret line="11" lean-forward="true" selection-start-line="11" selection-end-line="11" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/PPOPolicy.py">
+    <entry file="file://$PROJECT_DIR$/ComPolicyScript.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="400">
-          <caret line="319" column="36" lean-forward="true" selection-start-line="319" selection-start-column="36" selection-end-line="319" selection-end-column="36" />
+        <state relative-caret-position="-146">
+          <caret line="20" column="39" lean-forward="true" selection-start-line="20" selection-start-column="39" selection-end-line="20" selection-end-column="39" />
           <folding>
-            <marker date="1543658987819" expanded="true" signature="14717:14804" ph="..." />
+            <element signature="e#70#94#0" expanded="true" />
           </folding>
         </state>
       </provider>
