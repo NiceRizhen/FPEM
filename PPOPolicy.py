@@ -279,23 +279,24 @@ class PPOPolicy(policy):
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
 
+        with self.graph.as_default():
+            #with tf.variable_scope(agent):
+            self.pi = Policy_net('policy', self.sess, state_dim, 2*len(ACTIONS))
+            self.old_pi = Policy_net('old_policy', self.sess, state_dim, 2*len(ACTIONS))
+
+            self.PPOTrain = PPOTrain('train', self.sess, self.pi, self.old_pi)
+
+            self.n_training = 0
+
         with self.sess.as_default():
             with self.graph.as_default():
-                #with tf.variable_scope(agent):
-                self.pi = Policy_net('policy', self.sess, state_dim, 2*len(ACTIONS))
-                self.old_pi = Policy_net('old_policy', self.sess, state_dim, 2*len(ACTIONS))
-
-                self.PPOTrain = PPOTrain('train', self.sess, self.pi, self.old_pi)
-
-                self.n_training = 0
-                self.sess.run(tf.global_variables_initializer())
                 if is_training:
                     self.summary = tf.summary.FileWriter(log_path, self.sess.graph)
 
                 if is_continuing or not is_training:
-                    with self.graph.as_default():
-                        self.saver = tf.train.import_meta_graph(model_path+'.meta')
-                        self.read_model(model_path)
+                    self.saver = tf.train.Saver()
+                    self.read_model(model_path)
+
                 else:
                     self.sess.run(tf.global_variables_initializer())
                     self.saver = tf.train.Saver()
