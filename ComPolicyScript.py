@@ -16,7 +16,7 @@ def run_with_policy(f_pi, g_pi):
     episode = []
 
     state = env.reset()
-    while epoch < 300:
+    while epoch < 150:
 
         a1, a2 = f_pi.choose_action(state)
         a3, a4 = g_pi.choose_action(state)
@@ -35,29 +35,26 @@ def run_with_policy(f_pi, g_pi):
 if __name__ == '__main__':
     env = Game(5, 5)
 
- #   pi_g2 = PPOPolicy('g',  is_training=False, model_path='model/policy_for_g/g2vsf1.ckpt')
-
-
     # f policy
-    pi_f = PPOPolicy('fr', is_training=False, model_path='model/policy_for_f/fevse.ckpt')
+    # pi_f = PPOPolicy(is_training=False, model_path='model/policy_for_f/fevse.ckpt')
 
     # g policy
     pi_ramdom = RandomPolicy()
     pi_expert = ExpertPolicy(0.15)
-    pi_ge = PPOPolicy('gr', is_training=False, model_path='model/policy_for_g/g1vsfe.ckpt')
+    pi_g1 = PPOPolicy(is_training=False, model_path='model/policy_for_g/g1vsr.ckpt')
+    pi_g2 = PPOPolicy(is_training=False, model_path='model/policy_for_g/g2vsf1.ckpt')
 
-
-    reward_random = run_with_policy(pi_f ,pi_ramdom)
-    reward_expert = run_with_policy(pi_f, pi_expert)
-    reward_gvsfe = run_with_policy(pi_f, pi_ge)
- #   reward_gvsf1 = run_with_policy(pi_f, pi_g2)
+    reward_random = run_with_policy(pi_ramdom ,pi_ramdom)
+    reward_expert = run_with_policy(pi_ramdom, pi_expert)
+    reward_gvsr = run_with_policy(pi_ramdom, pi_g1)
+    reward_gvsf1 = run_with_policy(pi_ramdom, pi_g2)
 
     x = range(len(reward_random))
     plt.plot(x, reward_random, label="Random")
     plt.plot(x, reward_expert, label="Expert")
-    plt.plot(x, reward_gvsfe, label="g(fe)")
-  #  plt.plot(x, reward_gvsf1, label="g(f1)")
+    plt.plot(x, reward_gvsr, label="g1(r)")
+    plt.plot(x, reward_gvsf1, label="g2(f1)")
     plt.xlabel('Episode')
-    plt.ylabel('Return( vs fe)')
+    plt.ylabel('Return( vs random)')
     plt.legend()
-    plt.savefig('basepolicy-vs-fe.jpg')
+    plt.savefig('basepolicy-vs-r.jpg')

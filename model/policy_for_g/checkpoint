@@ -1,2 +1,3 @@
-model_checkpoint_path: "g1vsfe.ckpt"
-all_model_checkpoint_paths: "g1vsfe.ckpt"
+model_checkpoint_path: "g2vsf1.ckpt"
+all_model_checkpoint_paths: "g1vsr.ckpt"
+all_model_checkpoint_paths: "g2vsf1.ckpt"

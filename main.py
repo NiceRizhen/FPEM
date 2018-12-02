@@ -15,7 +15,7 @@ import os
 from ExpertPolicy import ExpertPolicy
 from GameEnv import Game
 from PPOPolicy import PPOPolicy
-#from RandomPolicy import RandomPolicy
+from RandomPolicy import RandomPolicy
 
 def alternating_training(training_pi, vs_pi, who_is_training:str, name:str):
 
@@ -86,11 +86,27 @@ def alternating_training(training_pi, vs_pi, who_is_training:str, name:str):
 if __name__ == '__main__':
     env = Game(5, 5)
 
+    pi_fe = PPOPolicy(is_training=False, model_path='model/policy_for_f/fevse.ckpt')
     pi_g = PPOPolicy(log_path='model/policy_for_g/logs')
-    pi_f = PPOPolicy(log_path='model/policy_for_f/logs')
-    pi_e = ExpertPolicy(0.15)
 
-    alternating_training(training_pi=pi_f, vs_pi=pi_e, who_is_training='f',name='fevse')
-    alternating_training(training_pi=pi_g, vs_pi=pi_f, who_is_training='g',name='g1vsfe')
+    pi_gt = PPOPolicy(log_path='model/policy_for_g')
+    pi_f = PPOPolicy(log_path='model/policy_for_f/logs')
+    pi_r = RandomPolicy()
+
+
+    try:
+        alternating_training(training_pi=pi_g, vs_pi=pi_fe, who_is_training='g',name='g1vsfe')
+        pi_fe.sess.close()
+        pi_g.sess.close()
+
+
+        alternating_training(training_pi=pi_gt, vs_pi=pi_r, who_is_training='g', name='g1vsr')
+        alternating_training(training_pi=pi_f, vs_pi=pi_gt, who_is_training='f', name='f1vsg1')
+        alternating_training(training_pi=pi_gt, vs_pi=pi_f, who_is_training='g', name='g2vsf1')
+    except:
+        pass
+    finally:
+        os.mkdir('mistake')
+        os.system('poweroff')
 
     os.system('poweroff')
