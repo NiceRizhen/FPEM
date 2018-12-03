@@ -1,135 +1,195 @@
-# This file is to realize the game environment
+# This file is to implement the game environment
 
+
+import numpy as np
 import random
+import math
 
 # action space:
 MOVE_UP    = 0
 MOVE_DOWN  = 1
 MOVE_LEFT  = 2
 MOVE_RIGHT = 3
-MOVE_STAY  = 4
+
+'''
+  For state, we set 0 for ground, 
+  1 for wall, 2 for opponent, 3 for treasure
+'''
+# units in env
+GROUND   = 0
+WALL     = 1
+OPPONENT = 2
+TREASURE = 3
 
 class Game():
 
     def __init__(self, xlen, ylen):
 
-        # the grid world attr
-        self.envxlen = xlen
-        self.envylen = ylen
+        # Game env list
+        self.xlen = xlen
+        self.ylen = ylen
+        self.space = np.zeros([self.xlen + 2, self.ylen + 2], dtype=np.int32)
 
-        # position of predator and prey
-        self.x_f1, self.y_f1 = 0, 0
-        self.x_f2, self.y_f2 = 0, 0
+        self.x1, self.x2, self.y1, self.y2 = 1,1,1,1
 
-        self.x_g1, self.y_g1 = 0, 0
-        self.x_g2, self.y_g2 = 0, 0
-
+        self.walls = (int)(math.sqrt(xlen*ylen)/2)
         # init the env
         self.reset()
 
-    def get_state(self):
+    def get_obs(self):
 
-        state = [self.x_f1, self.y_f1, self.x_f2, self.y_f2,
-                 self.x_g1, self.y_g1, self.x_g2, self.y_g2]
+        sp = self.space
+        x = self.x1
+        y = self.y1
 
-        return state
+        obs1 = [sp[x-1,y-1], sp[x-1,y], sp[x-1,y+1], sp[x,y-1], sp[x,y+1], sp[x+1,y-1], sp[x+1,y], sp[x+1,y+1]]
 
-    def display(self):
-        print('f1:[{0},{1}], f2:[{2},{3}], g1:[{4},{5}], g2:[{6},{7}]'.format(
-            self.x_f1,self.y_f1,self.x_f2,self.y_f2,self.x_g1,self.y_g1,self.x_g2,self.y_g2))
+        x = self.x2
+        y = self.y2
+        obs2 = [sp[x-1,y-1], sp[x-1,y], sp[x-1,y+1], sp[x,y-1], sp[x,y+1], sp[x+1,y-1], sp[x+1,y], sp[x+1,y+1]]
 
-        return
+        return obs1, obs2
 
-    def get_unit_pos(self, unit):
+    def move(self, x, y, action):
 
-        if unit is None:
-            return
+        done = False
 
-        x, y = 0, 0
-
-        if unit is 'f1':
-            x = self.x_f1
-            y = self.y_f1
-        if unit is 'f2':
-            x = self.x_f2
-            y = self.y_f2
-        if unit is 'g1':
-            x = self.x_g1
-            y = self.y_g1
-        if unit is 'g2':
-            x = self.x_g2
-            y = self.y_g2
-
-        return x, y
-
-    def set_unit_pos(self, unit, x, y):
-        if unit is None:
-            return
-
-        if unit is 'f1':
-            self.x_f1 = x
-            self.y_f1 = y
-        if unit is 'f2':
-            self.x_f2 = x
-            self.y_f2 = y
-        if unit is 'g1':
-            self.x_g1 = x
-            self.y_g1 = y
-        if unit is 'g2':
-            self.x_g2 = x
-            self.y_g2 = y
-
-    def move(self, unit, action):
-        x, y = self.get_unit_pos(unit)
-
-        if   action == MOVE_UP:
-            y = (y-1 if y>0 else 0)
+        if action == MOVE_UP:
+            if self.space[x-1, y] == WALL:
+                pass
+            elif self.space[x-1, y]==TREASURE:
+                done = True
+                self.space[x,y] = GROUND
+                x = x-1
+            else:
+                self.space[x,y] = GROUND
+                x = x-1
         elif action == MOVE_DOWN:
-            y = (y+1 if y<self.envylen-1 else y)
+            if self.space[x+1, y] == WALL:
+                pass
+            elif self.space[x+1, y]==TREASURE:
+                done = True
+                self.space[x,y] = GROUND
+                x = x+1
+            else:
+                self.space[x,y] = GROUND
+                x = x+1
         elif action == MOVE_LEFT:
-            x = (x-1 if x>0 else 0)
+            if self.space[x, y-1] == WALL:
+                pass
+            elif self.space[x, y-1]==TREASURE:
+                done = True
+                self.space[x,y] = GROUND
+                y = y-1
+            else:
+                self.space[x,y] = GROUND
+                y = y-1
         elif action == MOVE_RIGHT:
-            x = (x+1 if x<self.envxlen-1 else x)
-        elif action == MOVE_STAY:
-            pass
+            if self.space[x, y+1] == WALL:
+                pass
+            elif self.space[x, y+1]==TREASURE:
+                done = True
+                self.space[x,y] = GROUND
+                y = y+1
+            else:
+                self.space[x,y] = GROUND
+                y = y+1
         else:
-            print('input wrong action')
-            return
+            print('wrong action')
 
-        self.set_unit_pos(unit, x, y)
+        return done, x, y
 
-    def step(self, fa1, fa2, ga1, ga2):
+    def step(self, a1, a2):
 
-        self.move('f1', fa1)
-        self.move('f2', fa2)
-        self.move('g1', ga1)
-        self.move('g2', ga2)
+        r1, r2 = 0, 0
 
-        state = self.get_state()
+        done1, x, y = self.move(self.x1, self.y1, a1)
+        self.x1 = x
+        self.y1 = y
 
-        # reward: r2 for predator while r1 for prey
-        r2 = -self.get_Distance()
-        r1 = -r2
+        done2, x, y = self.move(self.x2, self.y2, a2)
+        self.x2 = x
+        self.y2 = y
 
-        return state, r1, r2
+        self.space[self.x1,self.y1] = OPPONENT
+        self.space[self.x2,self.y2] = OPPONENT
 
-    def get_Distance(self):
+        done = done1 or done2
 
-        D = max(min(abs(self.x_f1-self.x_g1)+abs(self.y_f1-self.y_g1),
-                    abs(self.x_f2-self.x_g1)+abs(self.y_f2-self.y_g1)),
-                min(abs(self.x_f1-self.x_g2)+abs(self.y_f1-self.y_g2),
-                    abs(self.x_f2-self.x_g2)+abs(self.y_f2-self.y_g2)))
+        if done1:
+            r1 = 1
+            r2 = -1
+        elif done2:
+            r1 = -1
+            r2 = 1
 
-        return D
+        if done1 and done2:
+            r1 = 0
+            r2 = 0
+
+        s1 , s2 = self.get_obs()
+
+        return s1,s2,r1,r2,done
+
+    def wall_num(self, x, y):
+        walls = 0
+
+        walls = walls + 1 if self.space[x - 1, y] == WALL else walls
+        walls = walls + 1 if self.space[x + 1, y] == WALL else walls
+        walls = walls + 1 if self.space[x, y - 1] == WALL else walls
+        walls = walls + 1 if self.space[x, y + 1] == WALL else walls
+
+        return walls
 
     def reset(self):
-        self.x_f1 = random.randint(0, self.envxlen - 1)
-        self.x_f2 = random.randint(0, self.envxlen - 1)
-        self.x_g1 = random.randint(0, self.envxlen - 1)
-        self.x_g2 = random.randint(0, self.envxlen - 1)
-        self.y_f1 = random.randint(0, self.envylen - 1)
-        self.y_f2 = random.randint(0, self.envylen - 1)
-        self.y_g1 = random.randint(0, self.envylen - 1)
-        self.y_g2 = random.randint(0, self.envylen - 1)
 
-        return self.get_state()
+        # init edge wall
+        self.space = np.zeros([self.xlen+2, self.ylen+2], dtype=np.int32)
+        self.space[0, :] = WALL
+        self.space[self.xlen+1, :] = WALL
+        self.space[:, 0] = WALL
+        self.space[:, self.ylen+1] = WALL
+
+        # init mid wall
+        for i in range(self.walls):
+            x = random.randint(2, self.xlen-1)
+            y = random.randint(2, self.ylen-1)
+            self.space[x, y] = WALL
+
+        # init player1
+        x = random.randint(1, self.xlen)
+        y = random.randint(1, self.ylen)
+
+        while self.wall_num(x,y)==4 or self.space[x,y]==WALL:
+            x = random.randint(1, self.xlen)
+            y = random.randint(1, self.ylen)
+
+        self.x1 = x
+        self.y1 = y
+        self.space[x,y] = OPPONENT
+
+        # init player2
+        x = random.randint(1, self.xlen)
+        y = random.randint(1, self.ylen)
+
+        while self.wall_num(x,y)==4 or self.space[x,y]==WALL:
+            x = random.randint(1, self.xlen)
+            y = random.randint(1, self.ylen)
+
+        self.x2 = x
+        self.y2 = y
+        self.space[x,y] = OPPONENT
+
+        # init treasure
+        x = random.randint(1, self.xlen)
+        y = random.randint(1, self.ylen)
+
+        while self.space[x,y] == WALL or \
+              self.space[x,y] == OPPONENT or \
+              self.wall_num(x,y) == 4:
+            x = random.randint(1, self.xlen)
+            y = random.randint(1, self.ylen)
+
+        self.space[x, y] = TREASURE
+
+        return self.get_obs()

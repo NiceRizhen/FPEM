@@ -17,9 +17,8 @@ MOVE_UP    = 0
 MOVE_DOWN  = 1
 MOVE_LEFT  = 2
 MOVE_RIGHT = 3
-MOVE_STAY  = 4
 
-ACTIONS = [MOVE_UP, MOVE_DOWN, MOVE_LEFT, MOVE_RIGHT, MOVE_STAY]
+ACTIONS = [MOVE_UP, MOVE_DOWN, MOVE_LEFT, MOVE_RIGHT]
 
 class Policy_net:
 
@@ -40,39 +39,34 @@ class Policy_net:
             with tf.variable_scope('policy_net'):
                 layer_1 = tf.layers.dense(inputs=self.obs, units=units, activation=activation)
                 layer_2 = tf.layers.dense(inputs=layer_1, units=units, activation=activation)
-                act = tf.layers.dense(inputs=layer_2, units=act_space, activation=None)
-                self.act_probs = tf.concat([tf.nn.softmax(act[:, :5]), tf.nn.softmax(act[:, -5:])], axis=1)
+                self.act_probs = tf.layers.dense(inputs=layer_2, units=act_space, activation=tf.nn.softmax)
 
             with tf.variable_scope('value_net'):
                 layer_1 = tf.layers.dense(inputs=self.obs, units=units, activation=activation)
                 layer_2 = tf.layers.dense(inputs=layer_1, units=units, activation=activation)
                 self.v_preds = tf.layers.dense(inputs=layer_2, units=1, activation=None)
 
-            self.act1_stochastic = tf.multinomial(tf.log(self.act_probs[:, :5]), num_samples=1)
-            self.act1_stochastic = tf.reshape(self.act1_stochastic, shape=[-1])
-            self.act2_stochastic = tf.multinomial(tf.log(self.act_probs[:, -5:]), num_samples=1)
-            self.act2_stochastic = tf.reshape(self.act2_stochastic, shape=[-1])
+            self.act_stochastic = tf.multinomial(tf.log(self.act_probs), num_samples=1)
+            self.act_stochastic = tf.reshape(self.act_stochastic, shape=[-1])
 
-            self.act1_deterministic = tf.argmax(self.act_probs[:5], axis=1)
-            self.act2_deterministic = tf.argmax(self.act_probs[-5:], axis=1)
+            self.act_deterministic = tf.argmax(self.act_probs, axis=1)
 
             self.scope = tf.get_variable_scope().name
-
 
     def act(self, obs, stochastic=True, verbose=False):
         obs = np.array(obs)
         obs = obs[np.newaxis, :]
         if stochastic:
-            act1, act2, v_preds = self.sess.run([self.act1_stochastic, self.act1_stochastic, self.v_preds],
+            act, v_preds = self.sess.run([self.act_stochastic, self.v_preds],
                                                     feed_dict={self.obs: obs})
             if verbose:
                 pass
                 # print('act_probs:', act_probs)
-                print('act1:{0}, act2:{1}'.format(act1,act2))
+                print('act:{0}'.format(act))
                 print('v_preds:', v_preds)
-            return [act1[0], act2[0]], v_preds
+            return act[0], v_preds
         else:
-            return self.sess.run([self.act1_deterministic, self.act2_deterministic, self.v_preds],
+            return self.sess.run([self.act_deterministic, self.v_preds],
                                  feed_dict={self.obs: obs})
 
     def get_action_prob(self, obs):
@@ -121,8 +115,7 @@ class PPOTrain:
 
             # inputs for train_op
             with tf.variable_scope('train_inp'):
-                self.actions1 = tf.placeholder(dtype=tf.int32, shape=[None], name='actions1')
-                self.actions2 = tf.placeholder(dtype=tf.int32, shape=[None], name='actions2')
+                self.actions = tf.placeholder(dtype=tf.int32, shape=[None], name='actions')
                 self.rewards = tf.placeholder(dtype=tf.float32, shape=[None], name='rewards')
                 self.v_preds_next = tf.placeholder(dtype=tf.float32, shape=[None], name='v_preds_next')
                 self.gaes = tf.placeholder(dtype=tf.float32, shape=[None], name='gaes')
@@ -131,14 +124,12 @@ class PPOTrain:
             act_probs_old = self.Old_Policy.act_probs
 
             # probabilities of actions which agent took with policy
-            act1 = tf.one_hot(indices=self.actions1, depth=5)
-            act2 = tf.one_hot(indices=self.actions2, depth=5)
-            act_onehot = tf.concat([act1, act2], axis=1)
-            act_probs = act_probs * act_onehot
+            act = tf.one_hot(indices=self.actions, depth=4)
+            act_probs = act_probs * act
             act_probs = tf.reduce_sum(act_probs, axis=1)
 
             # probabilities of actions which agent took with old policy
-            act_probs_old = act_probs_old * act_onehot
+            act_probs_old = act_probs_old * act
             act_probs_old = tf.reduce_sum(act_probs_old, axis=1)
 
             with tf.variable_scope('loss'):
@@ -178,21 +169,19 @@ class PPOTrain:
 
             self.train_op = optimizer.minimize(self.total_loss, var_list=pi_trainable)
 
-    def train(self, obs, actions1, actions2, gaes, rewards, v_preds_next):
+    def train(self, obs, actions, gaes, rewards, v_preds_next):
         _, total_loss = self.sess.run([self.train_op, self.total_loss], feed_dict={self.Policy.obs: obs,
                                                                                    self.Old_Policy.obs: obs,
-                                                                                   self.actions1: actions1,
-                                                                                   self.actions2: actions2,
+                                                                                   self.actions: actions,
                                                                                    self.rewards: rewards,
                                                                                    self.v_preds_next: v_preds_next,
                                                                                    self.gaes: gaes})
         return total_loss
 
-    def get_summary(self, obs, actions1, actions2, gaes, rewards, v_preds_next):
+    def get_summary(self, obs, actions, gaes, rewards, v_preds_next):
         return self.sess.run(self.merged, feed_dict={self.Policy.obs: obs,
                                                      self.Old_Policy.obs: obs,
-                                                     self.actions1: actions1,
-                                                     self.actions2: actions2,
+                                                     self.actions: actions,
                                                      self.rewards: rewards,
                                                      self.v_preds_next: v_preds_next,
                                                      self.gaes: gaes})
@@ -211,31 +200,29 @@ class PPOTrain:
             gaes[t] = gaes[t] + self.gamma * self.lamda * gaes[t + 1]
         return gaes
 
-    def get_grad(self, obs, actions1, actions2, gaes, rewards, v_preds_next):
+    def get_grad(self, obs, actions, gaes, rewards, v_preds_next):
         return self.sess.run(self.gradients, feed_dict={self.Policy.obs: obs,
                                                         self.Old_Policy.obs: obs,
-                                                        self.actions1: actions1,
-                                                        self.actions2: actions2,
+                                                        self.actions: actions,
                                                         self.rewards: rewards,
                                                         self.v_preds_next: v_preds_next,
                                                         self.gaes: gaes})
 
-    def ppo_train(self, observations, actions1, actions2, rewards, v_preds, v_preds_next, verbose=False):
+    def ppo_train(self, observations, actions, rewards, v_preds, v_preds_next, verbose=False):
         if verbose:
             print('PPO train now..........')
         gaes = self.get_gaes(rewards=rewards, v_preds=v_preds, v_preds_next=v_preds_next)
 
         # convert list to numpy array for feeding tf.placeholder
         observations = np.array(observations).astype(dtype=np.float32)
-        actions1 = np.array(actions1).astype(dtype=np.int32)
-        actions2 = np.array(actions2).astype(dtype=np.int32)
+        actions = np.array(actions).astype(dtype=np.int32)
         gaes = np.array(gaes).astype(dtype=np.float32)
         gaes = (gaes - gaes.mean()) / gaes.std()
         gaes = np.squeeze(gaes)
         rewards = np.array(rewards).astype(dtype=np.float32)
         v_preds_next = np.array(v_preds_next).astype(dtype=np.float32)
         v_preds_next = np.squeeze(v_preds_next)
-        inp = [observations, actions1, actions2, gaes, rewards, v_preds_next]
+        inp = [observations, actions, gaes, rewards, v_preds_next]
 
         self.assign_policy_parameters()
         # train
@@ -244,20 +231,18 @@ class PPOTrain:
             sample_indices = np.random.randint(low=0, high=observations.shape[0], size=self.batch_size)
             sampled_inp = [np.take(a=a, indices=sample_indices, axis=0) for a in inp]  # sample training data
             total_loss = self.train(obs=sampled_inp[0],
-                                    actions1=sampled_inp[1],
-                                    actions2=sampled_inp[2],
-                                    gaes=sampled_inp[3],
-                                    rewards=sampled_inp[4],
-                                    v_preds_next=sampled_inp[5])
+                                    actions=sampled_inp[1],
+                                    gaes=sampled_inp[2],
+                                    rewards=sampled_inp[3],
+                                    v_preds_next=sampled_inp[4])
             if verbose:
                 print('total_loss:', total_loss)
 
         summary = self.get_summary(obs=inp[0],
-                                   actions1=inp[1],
-                                   actions2=inp[2],
-                                   gaes=inp[3],
-                                   rewards=inp[4],
-                                   v_preds_next=inp[5])
+                                   actions=inp[1],
+                                   gaes=inp[2],
+                                   rewards=inp[3],
+                                   v_preds_next=inp[4])
         if verbose:
             print('PPO train end..........')
         return summary
@@ -281,8 +266,8 @@ class PPOPolicy(policy):
 
         with self.graph.as_default():
             #with tf.variable_scope(agent):
-            self.pi = Policy_net('policy', self.sess, state_dim, 2*len(ACTIONS))
-            self.old_pi = Policy_net('old_policy', self.sess, state_dim, 2*len(ACTIONS))
+            self.pi = Policy_net('policy', self.sess, state_dim, len(ACTIONS))
+            self.old_pi = Policy_net('old_policy', self.sess, state_dim, len(ACTIONS))
 
             self.PPOTrain = PPOTrain('train', self.sess, self.pi, self.old_pi)
 
@@ -295,7 +280,7 @@ class PPOPolicy(policy):
 
                 if is_continuing or not is_training:
                     self.saver = tf.train.Saver()
-                    self.read_model(model_path)
+                    self.load_model(model_path)
 
                 else:
                     self.sess.run(tf.global_variables_initializer())
@@ -307,7 +292,7 @@ class PPOPolicy(policy):
             with self.graph.as_default():
                 action, value = self.pi.act(state)
 
-        return action[0], action[1]
+        return action
 
     def get_action_value(self, state):
         with self.sess.as_default():
@@ -316,10 +301,10 @@ class PPOPolicy(policy):
 
         return action, value
 
-    def train(self, state, action1, action2, rewards, v, v_next):
+    def train(self, state, action, rewards, v, v_next):
         with self.sess.as_default():
             with self.graph.as_default():
-                summary = self.PPOTrain.ppo_train(state, action1, action2, rewards, v, v_next)
+                summary = self.PPOTrain.ppo_train(state, action, rewards, v, v_next)
 
                 self.n_training += 1
                 self.summary.add_summary(summary, self.n_training)
@@ -329,7 +314,7 @@ class PPOPolicy(policy):
             with self.graph.as_default():
                 self.saver.save(self.sess, save_path=path)
 
-    def read_model(self, path='model/latest.cpkt'):
+    def load_model(self, path='model/latest.cpkt'):
         with self.sess.as_default():
             with self.graph.as_default():
                 self.saver.restore(self.sess, save_path=path)
