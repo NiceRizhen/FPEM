@@ -67,7 +67,7 @@ def alternating_training(training_pi, vs_pi, who_is_training:str, name:str):
 
             a1,a2 = vs_pi.choose_action(s)
 
-        s_, r1, r2 = env.step(a1,a2,a3,a4)
+        s_, r1, r2 = env.step(a1,a2)
 
         r = r1 if who_is_training is 'f' else r2
 
@@ -103,17 +103,49 @@ def alternating_training(training_pi, vs_pi, who_is_training:str, name:str):
 
 
 if __name__ == '__main__':
-    env = Game(5, 5)
+    env = Game(8,8)
 
-    pi_fe = PPOPolicy(is_training=False, model_path='model/policy_for_f/fevse.ckpt')
-    pi_g = PPOPolicy(log_path='model/policy_for_g/gvsfelogs')
+    epoch = 0
+    while True:
+        epoch += 1
+        value_memory = []
+        state_memory = []
+        reward_memory = []
+        action_memory = []
 
-    alternating_training(training_pi=pi_g, vs_pi=pi_fe, who_is_training='g',name='gevsfe')
-    # pi_fe.sess.close()
-    # pi_g.sess.close()
-    run_with_policy(pi_fe, pi_g)
+        t = 0
+        done = False
+        s1, s2 = env.reset()
+        while True:
+            a1 = pi.choose_action(s1)
+            a2, v = pi1.get_action_value(s2)
 
-    #
-    # alternating_training(training_pi=pi_gt, vs_pi=pi_r, who_is_training='g', name='g1vsr')
-    # alternating_training(training_pi=pi_f, vs_pi=pi_gt, who_is_training='f', name='f1vsg1')
-    # alternating_training(training_pi=pi_gt, vs_pi=pi_f, who_is_training='g', name='g2vsf1')
+            s1_,s2_,r1,r2,done = env.step(a1,a2)
+
+            state_memory.append(s2)
+            reward_memory.append(r2)
+            value_memory.append(v)
+            action_memory.append(a2)
+
+            s1 = s1_
+            s2 = s2_
+
+            t = t+1
+            if done:
+                if len(action_memory) < 20:
+                    epoch -= 1
+                    break
+
+                a2, v = pi1.get_action_value(s2_)
+                value_next_memory = value_memory[1:] + [v]
+
+                pi1.train(state_memory, action_memory, reward_memory, value_memory, value_next_memory)
+
+                t = 0
+
+                if epoch % 20000 == 0:
+                    pi1.save_model('model/policy_for_g/pi1-{0}.ckpt'.format(epoch))
+                    print('epoch:{0}  wining_rate:{1}'.format(epoch, wining_rate(pi,pi1)))
+
+                break
+

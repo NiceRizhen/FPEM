@@ -81,7 +81,7 @@ class Policy_net:
 
 class PPOTrain:
 
-    def __init__(self, name, sess, Policy, Old_Policy, gamma=0.95, clip_value=0.2, c_1=0.01, c_2=0.1):
+    def __init__(self, name, sess, Policy, Old_Policy, gamma=0.95, clip_value=0.2, c_1=0.9, c_2=0.01):
         """
         :param Policy:
         :param Old_Policy:
@@ -124,7 +124,7 @@ class PPOTrain:
             act_probs_old = self.Old_Policy.act_probs
 
             # probabilities of actions which agent took with policy
-            act = tf.one_hot(indices=self.actions, depth=4)
+            act = tf.one_hot(indices=self.actions, depth=len(ACTIONS))
             act_probs = act_probs * act
             act_probs = tf.reduce_sum(act_probs, axis=1)
 

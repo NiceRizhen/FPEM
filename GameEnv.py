@@ -33,6 +33,7 @@ class Game():
         self.x1, self.x2, self.y1, self.y2 = 1,1,1,1
 
         self.walls = (int)(math.sqrt(xlen*ylen)/2)
+
         # init the env
         self.reset()
 
@@ -124,8 +125,8 @@ class Game():
             r2 = 1
 
         if done1 and done2:
-            r1 = 0
-            r2 = 0
+            r1 = 1
+            r2 = 1
 
         s1 , s2 = self.get_obs()
 
@@ -192,4 +193,4 @@ class Game():
 
         self.space[x, y] = TREASURE
 
-        return self.get_obs()
+        return self.get_obs(), self.space
