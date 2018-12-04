@@ -15,11 +15,14 @@ MOVE_RIGHT = 3
   For state, we set 0 for ground, 
   1 for wall, 2 for opponent, 3 for treasure
 '''
-# units in env
 GROUND   = 0
 WALL     = 1
 OPPONENT = 2
 TREASURE = 3
+
+# wall's shape, 0 for line, 1 for curve
+LINE  = 0
+CURVE = 1
 
 class Game():
 
@@ -32,7 +35,7 @@ class Game():
 
         self.x1, self.x2, self.y1, self.y2 = 1,1,1,1
 
-        self.walls = (int)(math.sqrt(xlen*ylen)/2)
+        # self.walls = (int)(math.sqrt(xlen*ylen)/2)
 
         # init the env
         self.reset()
@@ -65,6 +68,7 @@ class Game():
             else:
                 self.space[x,y] = GROUND
                 x = x-1
+
         elif action == MOVE_DOWN:
             if self.space[x+1, y] == WALL:
                 pass
@@ -75,6 +79,7 @@ class Game():
             else:
                 self.space[x,y] = GROUND
                 x = x+1
+
         elif action == MOVE_LEFT:
             if self.space[x, y-1] == WALL:
                 pass
@@ -85,6 +90,7 @@ class Game():
             else:
                 self.space[x,y] = GROUND
                 y = y-1
+
         elif action == MOVE_RIGHT:
             if self.space[x, y+1] == WALL:
                 pass
@@ -151,11 +157,80 @@ class Game():
         self.space[:, 0] = WALL
         self.space[:, self.ylen+1] = WALL
 
+        line_num = 0
         # init mid wall
-        for i in range(self.walls):
-            x = random.randint(2, self.xlen-1)
-            y = random.randint(2, self.ylen-1)
-            self.space[x, y] = WALL
+        i = 0
+        while i < 3:
+
+            # create line wall
+            if random.randint(0,1) == LINE:
+
+                x = random.randint(1,self.xlen)
+                y = random.randint(1,self.ylen)
+
+                form = random.randint(0,1)
+                if form is 0:
+                    while self.space[x,y] == WALL or self.space[x,y-1] == WALL or self.space[x,y+1] == WALL:
+                        x = random.randint(1, self.xlen)
+                        y = random.randint(1, self.ylen)
+
+                    self.space[x, y-1] = WALL
+                    self.space[x, y] = WALL
+                    self.space[x, y+1] = WALL
+
+                else:
+                    while self.space[x-1,y] == WALL or self.space[x,y] == WALL or self.space[x+1,y] == WALL:
+                        x = random.randint(1, self.xlen)
+                        y = random.randint(1, self.ylen)
+
+                    self.space[x-1, y] = WALL
+                    self.space[x, y] = WALL
+                    self.space[x+1, y] = WALL
+
+            # create curve wall
+            else:
+                x = random.randint(1,self.xlen)
+                y = random.randint(1,self.ylen)
+
+                form = random.randint(0,3)
+
+                if form == 0:
+                    while self.space[x+1, y] == WALL or self.space[x, y] == WALL or self.space[x, y+1] == WALL:
+                        x = random.randint(1, self.xlen)
+                        y = random.randint(1, self.ylen)
+
+                    self.space[x+1, y] = WALL
+                    self.space[x, y] = WALL
+                    self.space[x , y+1] = WALL
+
+                elif form == 1:
+                    while self.space[x+1, y] == WALL or self.space[x, y] == WALL or self.space[x, y-1] == WALL:
+                        x = random.randint(1, self.xlen)
+                        y = random.randint(1, self.ylen)
+
+                    self.space[x+1, y] = WALL
+                    self.space[x, y] = WALL
+                    self.space[x, y-1] = WALL
+
+                elif form == 2:
+                    while self.space[x-1, y] == WALL or self.space[x, y] == WALL or self.space[x, y+1] == WALL:
+                        x = random.randint(1, self.xlen)
+                        y = random.randint(1, self.ylen)
+
+                    self.space[x-1, y] = WALL
+                    self.space[x, y] = WALL
+                    self.space[x, y+1] = WALL
+
+                else:
+                    while self.space[x-1, y] == WALL or self.space[x, y] == WALL or self.space[x, y-1] == WALL:
+                        x = random.randint(1, self.xlen)
+                        y = random.randint(1, self.ylen)
+
+                    self.space[x-1, y] = WALL
+                    self.space[x, y] = WALL
+                    self.space[x, y-1] = WALL
+
+            i += 1
 
         # init player1
         x = random.randint(1, self.xlen)
@@ -173,7 +248,7 @@ class Game():
         x = random.randint(1, self.xlen)
         y = random.randint(1, self.ylen)
 
-        while self.wall_num(x,y)==4 or self.space[x,y]==WALL:
+        while self.wall_num(x,y)>1 or self.space[x,y]==WALL or self.space[x,y] == OPPONENT or x < self.x1 or y < self.x2:
             x = random.randint(1, self.xlen)
             y = random.randint(1, self.ylen)
 
@@ -182,14 +257,14 @@ class Game():
         self.space[x,y] = OPPONENT
 
         # init treasure
-        x = random.randint(1, self.xlen)
-        y = random.randint(1, self.ylen)
+        x = random.randint(3, self.xlen-2)
+        y = random.randint(3, self.ylen-2)
 
         while self.space[x,y] == WALL or \
               self.space[x,y] == OPPONENT or \
               self.wall_num(x,y) == 4:
-            x = random.randint(1, self.xlen)
-            y = random.randint(1, self.ylen)
+            x = random.randint(3, self.xlen-2)
+            y = random.randint(3, self.ylen-2)
 
         self.space[x, y] = TREASURE
 

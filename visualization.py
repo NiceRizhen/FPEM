@@ -1,15 +1,19 @@
-import numpy as np
+'''
+  This files contains visualization functions
+  for observing the performance of our policy.
+'''
+
 import time
+import numpy as np
 import tkinter as tk
-import random
 from GameEnv import Game
 from PPOPolicy import PPOPolicy
 from RandomPolicy import RandomPolicy
 
-
-UNIT = 40   # pixels
-MAZE_H = 10  # grid height
-MAZE_W = 10  # grid width
+# visualization params
+UNIT   = 40
+MAZE_H = 10
+MAZE_W = 10
 
 # units in env
 GROUND   = 0
@@ -22,7 +26,7 @@ class Maze(tk.Tk, object):
         super(Maze, self).__init__()
         self.action_space = ['u', 'd', 'l', 'r']
         self.n_actions = len(self.action_space)
-        self.title('maze')
+        self.title('Grid World')
         self.geometry('{0}x{1}'.format(MAZE_H * UNIT, MAZE_H * UNIT))
         self.wall = []
         self._build_maze(space)
@@ -47,13 +51,16 @@ class Maze(tk.Tk, object):
         player = 0
         for x in range(10):
             for y in range(10):
+
+                # create walls
                 if space[x, y] == WALL:
-                    hell1_center = origin + np.array([UNIT * y, UNIT * x])
+                    wall_center = origin + np.array([UNIT * y, UNIT * x])
                     self.wall.append(self.canvas.create_rectangle(
-                        hell1_center[0] - 15, hell1_center[1] - 15,
-                        hell1_center[0] + 15, hell1_center[1] + 15,
+                        wall_center[0] - 15, wall_center[1] - 15,
+                        wall_center[0] + 15, wall_center[1] + 15,
                         fill='black'))
 
+                # create treasure
                 elif space[x, y] == TREASURE:
                     oval_center = origin + np.array([UNIT * y, UNIT * x])
                     self.oval = self.canvas.create_oval(
@@ -61,6 +68,7 @@ class Maze(tk.Tk, object):
                         oval_center[0] + 15, oval_center[1] + 15,
                         fill='yellow')
 
+                # create players
                 elif space[x, y] == OPPONENT:
                     if player is 0:
                         player += 1
@@ -144,7 +152,7 @@ if __name__ == '__main__':
     pi_random = RandomPolicy()
     pi_ppo = PPOPolicy(is_training=False, model_path='model/policy_for_g/pi1-60000.ckpt')
 
-    for  epoch in range(15):
+    for  epoch in range(100):
         s, space = ga.reset()
         s1 = s[0]
         s2 = s[1]
@@ -152,14 +160,13 @@ if __name__ == '__main__':
         while True:
             env.render()
             a1 = pi_random.choose_action(s1)
-            a2, v = pi_ppo.get_action_value(s2)
+            a2 = pi_ppo.choose_action(s2)
             _ = env.step(a1, a2)
 
             s1_,s2_,r1,r2,done = ga.step(a1,a2)
 
             s1 = s1_
             s2 = s2_
-            time.sleep(0.1)
 
             if done:
                 break
