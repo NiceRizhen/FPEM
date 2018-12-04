@@ -122,13 +122,11 @@ class Maze(tk.Tk, object):
         done = False
         if s_1 == self.canvas.coords(self.oval):
             done = True
-
         elif s_1 in [self.canvas.coords(wal) for wal in self.wall]:
             self.canvas.move(self.player1, -base_action1[0], -base_action1[1])
 
         if s_2 == self.canvas.coords(self.oval):
             done = True
-
         elif s_2 in [self.canvas.coords(wal) for wal in self.wall]:
             self.canvas.move(self.player2, -base_action2[0], -base_action2[1])
 
@@ -146,7 +144,7 @@ if __name__ == '__main__':
     pi_random = RandomPolicy()
     pi_ppo = PPOPolicy(is_training=False, model_path='model/policy_for_g/pi1-60000.ckpt')
 
-    for  epoch in range(10):
+    for  epoch in range(15):
         s, space = ga.reset()
         s1 = s[0]
         s2 = s[1]
@@ -161,6 +159,7 @@ if __name__ == '__main__':
 
             s1 = s1_
             s2 = s2_
+            time.sleep(0.1)
 
             if done:
                 break
