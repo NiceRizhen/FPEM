@@ -12,6 +12,7 @@ import copy
 import numpy as np
 import tensorflow as tf
 from BasePolicy import policy
+from collections import deque
 
 MOVE_UP    = 0
 MOVE_DOWN  = 1
@@ -22,9 +23,10 @@ ACTIONS = [MOVE_UP, MOVE_DOWN, MOVE_LEFT, MOVE_RIGHT]
 
 class Policy_net:
 
-    def  __init__(self, name: str, sess, ob_space, act_space, activation=tf.nn.relu, units=128):
+    def  __init__(self, name: str, sess, ob_space, act_space, k=1, activation=tf.nn.relu, units=128):
         '''
         Network of PPO algorithm
+        :param k: history used
         :param name: string
         :param sess:
         :param ob_space:
@@ -35,7 +37,7 @@ class Policy_net:
         self.sess = sess
 
         with tf.variable_scope(name):
-            self.obs = tf.placeholder(dtype=tf.float32, shape=[None, ob_space], name='obs')
+            self.obs = tf.placeholder(dtype=tf.float32, shape=[None, k * ob_space], name='obs')
             with tf.variable_scope('policy_net'):
                 layer_1 = tf.layers.dense(inputs=self.obs, units=units, activation=activation)
                 layer_2 = tf.layers.dense(inputs=layer_1, units=units, activation=activation)
@@ -255,7 +257,8 @@ class PPOPolicy(policy):
               while model name to infer the degree of our training
     '''
     def __init__(self,
-                 state_dim=8,
+                 k=1,
+                 state_dim=8*4,
                  log_path='model/logs/',
                  model_path='model/latest.cpkt',
                  is_continuing=False,
@@ -263,11 +266,15 @@ class PPOPolicy(policy):
 
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
+        self.history_obs = deque(maxlen=k)
+        self.k = k
+        self.state_dim = state_dim
+        self.empty_memory()
 
         with self.graph.as_default():
-            #with tf.variable_scope(agent):
-            self.pi = Policy_net('policy', self.sess, state_dim, len(ACTIONS))
-            self.old_pi = Policy_net('old_policy', self.sess, state_dim, len(ACTIONS))
+
+            self.pi = Policy_net('policy', self.sess, state_dim, len(ACTIONS), k)
+            self.old_pi = Policy_net('old_policy', self.sess, state_dim, len(ACTIONS), k)
 
             self.PPOTrain = PPOTrain('train', self.sess, self.pi, self.old_pi)
 
@@ -275,17 +282,18 @@ class PPOPolicy(policy):
 
         with self.sess.as_default():
             with self.graph.as_default():
-                if is_training:
+                if is_training or is_continuing:
                     self.summary = tf.summary.FileWriter(log_path, self.sess.graph)
 
+                # just using model
                 if is_continuing or not is_training:
                     self.saver = tf.train.Saver()
                     self.load_model(model_path)
 
+                # a totally new model
                 else:
                     self.sess.run(tf.global_variables_initializer())
                     self.saver = tf.train.Saver()
-
 
     def choose_action(self, state):
         with self.sess.as_default():
@@ -301,13 +309,51 @@ class PPOPolicy(policy):
 
         return action, value
 
-    def train(self, state, action, rewards, v, v_next):
+    def save_transition(self, obs, action, reward, v):
+
+        self.history_obs.append(obs)
+        k_obs = np.array([])
+        for i in range(self.k):
+            k_obs = np.hstack((k_obs, self.history_obs[i]))
+
+        self.obs_memory.append(k_obs)
+        self.action_memory.append(action)
+        self.reward_memory.append(reward)
+        self.v_memory.append(v)
+
+    def empty_memory(self):
+
+        for i in range(self.k):
+            zero_state = np.zeros([self.state_dim])
+            self.history_obs.append(zero_state)
+
+        self.obs_memory = []
+        self.action_memory = []
+        self.reward_memory = []
+        self.v_memory = []
+
+    def train(self, final_obs):
         with self.sess.as_default():
             with self.graph.as_default():
-                summary = self.PPOTrain.ppo_train(state, action, rewards, v, v_next)
+
+                # compute the v of last obs
+                # this obs was missed given that done==True
+                self.history_obs.append(final_obs)
+                k_obs = np.array([])
+                for i in range(self.k):
+                    k_obs = np.hstack((k_obs, self.history_obs[i]))
+
+                act, v = self.get_action_value(k_obs)
+
+                # get v_next list
+                v_next = self.v_memory[1:] + [v]
+
+                summary = self.PPOTrain.ppo_train(self.obs_memory, self.action_memory, self.reward_memory, self.v_memory, v_next)
 
                 self.n_training += 1
                 self.summary.add_summary(summary, self.n_training)
+
+                self.empty_memory()
 
     def save_model(self, path='model/latest.cpkt'):
         with self.sess.as_default():

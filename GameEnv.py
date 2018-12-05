@@ -46,13 +46,29 @@ class Game():
         x = self.x1
         y = self.y1
 
-        obs1 = [sp[x-1,y-1], sp[x-1,y], sp[x-1,y+1], sp[x,y-1], sp[x,y+1], sp[x+1,y-1], sp[x+1,y], sp[x+1,y+1]]
+        obs1 = np.zeros([8,4])
+        obs1[0, sp[x-1,y-1]] = 1
+        obs1[1, sp[x-1,y]]   = 1
+        obs1[2, sp[x-1,y+1]] = 1
+        obs1[3, sp[x,y-1]]   = 1
+        obs1[4, sp[x,y+1]]   = 1
+        obs1[5, sp[x+1,y-1]] = 1
+        obs1[6, sp[x+1,y]]   = 1
+        obs1[7, sp[x+1,y+1]] = 1
 
         x = self.x2
         y = self.y2
-        obs2 = [sp[x-1,y-1], sp[x-1,y], sp[x-1,y+1], sp[x,y-1], sp[x,y+1], sp[x+1,y-1], sp[x+1,y], sp[x+1,y+1]]
+        obs2 = np.zeros([8,4])
+        obs2[0, sp[x-1,y-1]] = 1
+        obs2[1, sp[x-1,y]]   = 1
+        obs2[2, sp[x-1,y+1]] = 1
+        obs2[3, sp[x,y-1]]   = 1
+        obs2[4, sp[x,y+1]]   = 1
+        obs2[5, sp[x+1,y-1]] = 1
+        obs2[6, sp[x+1,y]]   = 1
+        obs2[7, sp[x+1,y+1]] = 1
 
-        return obs1, obs2
+        return obs1.flatten(), obs2.flatten()
 
     def move(self, x, y, action):
 
@@ -157,16 +173,14 @@ class Game():
         self.space[:, 0] = WALL
         self.space[:, self.ylen+1] = WALL
 
-        line_num = 0
         # init mid wall
         i = 0
         while i < 3:
 
+            x = random.randint(1, self.xlen)
+            y = random.randint(1, self.ylen)
             # create line wall
             if random.randint(0,1) == LINE:
-
-                x = random.randint(1,self.xlen)
-                y = random.randint(1,self.ylen)
 
                 form = random.randint(0,1)
                 if form is 0:
@@ -189,8 +203,6 @@ class Game():
 
             # create curve wall
             else:
-                x = random.randint(1,self.xlen)
-                y = random.randint(1,self.ylen)
 
                 form = random.randint(0,3)
 
@@ -233,10 +245,10 @@ class Game():
             i += 1
 
         # init player1
-        x = random.randint(1, self.xlen)
-        y = random.randint(1, self.ylen)
+        x = random.randint(1, self.xlen-1)
+        y = random.randint(1, self.ylen-1)
 
-        while self.wall_num(x,y)==4 or self.space[x,y]==WALL:
+        while self.wall_num(x,y)>1 or self.space[x,y]==WALL:
             x = random.randint(1, self.xlen)
             y = random.randint(1, self.ylen)
 
@@ -248,7 +260,7 @@ class Game():
         x = random.randint(1, self.xlen)
         y = random.randint(1, self.ylen)
 
-        while self.wall_num(x,y)>1 or self.space[x,y]==WALL or self.space[x,y] == OPPONENT or x < self.x1 or y < self.x2:
+        while self.wall_num(x,y)>1 or self.space[x,y]==WALL or self.space[x,y] == OPPONENT or x < self.x1:
             x = random.randint(1, self.xlen)
             y = random.randint(1, self.ylen)
 
@@ -262,7 +274,7 @@ class Game():
 
         while self.space[x,y] == WALL or \
               self.space[x,y] == OPPONENT or \
-              self.wall_num(x,y) == 4:
+              self.wall_num(x,y) > 2:
             x = random.randint(3, self.xlen-2)
             y = random.randint(3, self.ylen-2)
 
