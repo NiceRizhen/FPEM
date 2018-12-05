@@ -150,13 +150,14 @@ if __name__ == '__main__':
     ga = Game(8,8)
 
     pi_random = RandomPolicy()
-    pi_ppo = PPOPolicy(is_training=False, model_path='model/policy_for_g/pi1-60000.ckpt')
+    pi_ppo = PPOPolicy(is_training=False, model_path='model/ppo-20000.ckpt')
 
-    for  epoch in range(100):
+    while True:
         s, space = ga.reset()
         s1 = s[0]
         s2 = s[1]
         env = Maze(space)
+        t = 0
         while True:
             env.render()
             a1 = pi_random.choose_action(s1)
@@ -167,6 +168,9 @@ if __name__ == '__main__':
 
             s1 = s1_
             s2 = s2_
+            t += 1
+            if t > 1500:
+                break
 
             if done:
                 break

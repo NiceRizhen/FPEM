@@ -3,10 +3,10 @@
     Based on PPO algorithm (OpenAI)
 
 '''
-#
-# import os
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import copy
 import numpy as np
@@ -57,16 +57,18 @@ class Policy_net:
 
     def act(self, obs, stochastic=True, verbose=False):
         obs = np.array(obs)
-        obs = obs[np.newaxis, :]
+
+        if obs.shape[0] != 1:
+            obs = obs[np.newaxis, :]
+
         if stochastic:
             act, v_preds = self.sess.run([self.act_stochastic, self.v_preds],
                                                     feed_dict={self.obs: obs})
             if verbose:
-                pass
-                # print('act_probs:', act_probs)
+                #print('act_probs:', act_probs)
                 print('act:{0}'.format(act))
                 print('v_preds:', v_preds)
-            return act[0], v_preds
+            return act[0], v_preds[0,0]
         else:
             return self.sess.run([self.act_deterministic, self.v_preds],
                                  feed_dict={self.obs: obs})
@@ -83,7 +85,7 @@ class Policy_net:
 
 class PPOTrain:
 
-    def __init__(self, name, sess, Policy, Old_Policy, gamma=0.95, clip_value=0.2, c_1=0.9, c_2=0.01):
+    def __init__(self, name, sess, Policy, Old_Policy, gamma=0.98, clip_value=0.2, c_1=0.5, c_2=0.05):
         """
         :param Policy:
         :param Old_Policy:
@@ -102,7 +104,7 @@ class PPOTrain:
         self.clip_value = clip_value
         self.c_1 = c_1
         self.c_2 = c_2
-        self.adam_lr = 2e-5
+        self.adam_lr = 1e-5
         self.adam_epsilon = 1e-5
 
         with tf.name_scope(name):
@@ -137,8 +139,8 @@ class PPOTrain:
             with tf.variable_scope('loss'):
                 # construct computation graph for loss_clip
                 # ratios = tf.divide(act_probs, act_probs_old)
-                ratios = tf.exp(tf.log(tf.clip_by_value(act_probs, 1e-8, 1.0))
-                                - tf.log(tf.clip_by_value(act_probs_old, 1e-8, 1.0)))
+                ratios = tf.exp(tf.log(tf.clip_by_value(act_probs, 1e-10, 1.0))
+                                - tf.log(tf.clip_by_value(act_probs_old, 1e-10, 1.0)))
                 clipped_ratios = tf.clip_by_value(ratios, clip_value_min=1 - self.clip_value,
                                                   clip_value_max=1 + self.clip_value)
                 loss_clip = tf.minimum(tf.multiply(self.gaes, ratios), tf.multiply(self.gaes, clipped_ratios))
@@ -210,7 +212,7 @@ class PPOTrain:
                                                         self.v_preds_next: v_preds_next,
                                                         self.gaes: gaes})
 
-    def ppo_train(self, observations, actions, rewards, v_preds, v_preds_next, verbose=False):
+    def ppo_train(self, observations, actions, rewards, v_preds, v_preds_next, verbose=True):
         if verbose:
             print('PPO train now..........')
         gaes = self.get_gaes(rewards=rewards, v_preds=v_preds, v_preds_next=v_preds_next)
@@ -223,7 +225,6 @@ class PPOTrain:
         gaes = np.squeeze(gaes)
         rewards = np.array(rewards).astype(dtype=np.float32)
         v_preds_next = np.array(v_preds_next).astype(dtype=np.float32)
-        v_preds_next = np.squeeze(v_preds_next)
         inp = [observations, actions, gaes, rewards, v_preds_next]
 
         self.assign_policy_parameters()
@@ -266,9 +267,14 @@ class PPOPolicy(policy):
 
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
-        self.history_obs = deque(maxlen=k)
+        self.history_obs   = []
+        self.obs_memory    = []
+        self.action_memory = []
+        self.reward_memory = []
+        self.v_memory      = []
 
         self.k = k
+        self.is_training = is_training
         self.state_dim = state_dim
         self.empty_memory()
 
@@ -297,10 +303,20 @@ class PPOPolicy(policy):
                     self.saver = tf.train.Saver()
 
     def choose_action(self, state):
-        self.history_obs.append(state)
-        k_obs = np.array([])
-        for i in range(self.k):
-            k_obs = np.hstack((k_obs, self.history_obs[i]))
+
+        if not self.is_training:
+            self.history_obs.append(state)
+            self.history_obs.pop(0)
+            k_obs = np.array([])
+            for obs in self.history_obs:
+                k_obs = np.hstack((k_obs, obs))
+
+        else:
+            k_obs = np.array([])
+            for i in range(1, self.k):
+                k_obs = np.hstack((k_obs, self.history_obs[i]))
+
+            k_obs = np.hstack((k_obs, state))
 
         with self.sess.as_default():
             with self.graph.as_default():
@@ -309,10 +325,20 @@ class PPOPolicy(policy):
         return action
 
     def get_action_value(self, state):
-        self.history_obs.append(state)
-        k_obs = np.array([])
-        for i in range(self.k):
-            k_obs = np.hstack((k_obs, self.history_obs[i]))
+
+        if not self.is_training:
+            self.history_obs.append(state)
+            self.history_obs.pop(0)
+            k_obs = np.array([])
+            for obs in self.history_obs:
+                k_obs = np.hstack((k_obs, obs))
+
+        else:
+            k_obs = np.array([])
+            for i in range(1, self.k):
+                k_obs = np.hstack((k_obs, self.history_obs[i]))
+
+            k_obs = np.hstack((k_obs, state))
 
         with self.sess.as_default():
             with self.graph.as_default():
@@ -323,9 +349,10 @@ class PPOPolicy(policy):
     def save_transition(self, obs, action, reward, v):
 
         self.history_obs.append(obs)
+        self.history_obs.pop(0)
         k_obs = np.array([])
-        for i in range(self.k):
-            k_obs = np.hstack((k_obs, self.history_obs[i]))
+        for o in self.history_obs:
+            k_obs = np.hstack((k_obs, o))
 
         self.obs_memory.append(k_obs)
         self.action_memory.append(action)
@@ -339,23 +366,21 @@ class PPOPolicy(policy):
             zero_state = np.zeros([self.state_dim])
             self.history_obs.append(zero_state)
 
-        self.obs_memory = []
-        self.action_memory = []
-        self.reward_memory = []
-        self.v_memory = []
+        self.obs_memory.clear()
+        self.action_memory.clear()
+        self.reward_memory.clear()
+        self.v_memory.clear()
 
     def train(self, final_obs):
+        print('training')
         with self.sess.as_default():
             with self.graph.as_default():
 
+
+                print('get v')
                 # compute the v of last obs
                 # this obs was missed when done==True
-                self.history_obs.append(final_obs)
-                k_obs = np.array([])
-                for i in range(self.k):
-                    k_obs = np.hstack((k_obs, self.history_obs[i]))
-
-                act, v = self.get_action_value(k_obs)
+                act, v = self.get_action_value(final_obs)
 
                 # get v_next list
                 v_next = self.v_memory[1:] + [v]
@@ -363,9 +388,13 @@ class PPOPolicy(policy):
                 summary = self.PPOTrain.ppo_train(self.obs_memory, self.action_memory, self.reward_memory, self.v_memory, v_next)
 
                 self.n_training += 1
+
+                print('add summary')
                 self.summary.add_summary(summary, self.n_training)
 
+                print('empty')
                 self.empty_memory()
+                print('add summary and empty end')
 
     def save_model(self, path='model/latest.cpkt'):
         with self.sess.as_default():

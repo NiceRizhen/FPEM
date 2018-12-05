@@ -155,6 +155,7 @@ class Game():
         return s1,s2,r1,r2,done
 
     def wall_num(self, x, y):
+
         walls = 0
 
         walls = walls + 1 if self.space[x - 1, y] == WALL else walls
@@ -179,6 +180,7 @@ class Game():
 
             x = random.randint(1, self.xlen)
             y = random.randint(1, self.ylen)
+
             # create line wall
             if random.randint(0,1) == LINE:
 
@@ -246,10 +248,10 @@ class Game():
 
         # init player1
         x = random.randint(1, self.xlen-1)
-        y = random.randint(1, self.ylen-1)
+        y = random.randint(1, self.ylen)
 
-        while self.wall_num(x,y)>1 or self.space[x,y]==WALL:
-            x = random.randint(1, self.xlen)
+        while self.space[x,y]==WALL:
+            x = random.randint(1, self.xlen-1)
             y = random.randint(1, self.ylen)
 
         self.x1 = x
@@ -260,7 +262,7 @@ class Game():
         x = random.randint(1, self.xlen)
         y = random.randint(1, self.ylen)
 
-        while self.wall_num(x,y)>1 or self.space[x,y]==WALL or self.space[x,y] == OPPONENT or x < self.x1:
+        while self.space[x,y]==WALL or self.space[x,y] == OPPONENT or x <= self.x1:
             x = random.randint(1, self.xlen)
             y = random.randint(1, self.ylen)
 
@@ -273,8 +275,7 @@ class Game():
         y = random.randint(3, self.ylen-2)
 
         while self.space[x,y] == WALL or \
-              self.space[x,y] == OPPONENT or \
-              self.wall_num(x,y) > 2:
+              self.space[x,y] == OPPONENT:
             x = random.randint(3, self.xlen-2)
             y = random.randint(3, self.ylen-2)
 
