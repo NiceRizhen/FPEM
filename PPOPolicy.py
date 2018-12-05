@@ -3,10 +3,10 @@
     Based on PPO algorithm (OpenAI)
 
 '''
-
-import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+#
+# import os
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import copy
 import numpy as np
@@ -267,6 +267,7 @@ class PPOPolicy(policy):
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
         self.history_obs = deque(maxlen=k)
+
         self.k = k
         self.state_dim = state_dim
         self.empty_memory()
@@ -296,16 +297,26 @@ class PPOPolicy(policy):
                     self.saver = tf.train.Saver()
 
     def choose_action(self, state):
+        self.history_obs.append(state)
+        k_obs = np.array([])
+        for i in range(self.k):
+            k_obs = np.hstack((k_obs, self.history_obs[i]))
+
         with self.sess.as_default():
             with self.graph.as_default():
-                action, value = self.pi.act(state)
+                action, value = self.pi.act(k_obs)
 
         return action
 
     def get_action_value(self, state):
+        self.history_obs.append(state)
+        k_obs = np.array([])
+        for i in range(self.k):
+            k_obs = np.hstack((k_obs, self.history_obs[i]))
+
         with self.sess.as_default():
             with self.graph.as_default():
-                action, value = self.pi.act(state)
+                action, value = self.pi.act(k_obs)
 
         return action, value
 
@@ -323,6 +334,7 @@ class PPOPolicy(policy):
 
     def empty_memory(self):
 
+        self.history_obs.clear()
         for i in range(self.k):
             zero_state = np.zeros([self.state_dim])
             self.history_obs.append(zero_state)
@@ -337,7 +349,7 @@ class PPOPolicy(policy):
             with self.graph.as_default():
 
                 # compute the v of last obs
-                # this obs was missed given that done==True
+                # this obs was missed when done==True
                 self.history_obs.append(final_obs)
                 k_obs = np.array([])
                 for i in range(self.k):
