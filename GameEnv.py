@@ -35,8 +35,6 @@ class Game():
 
         self.x1, self.x2, self.y1, self.y2 = 1,1,1,1
 
-        # self.walls = (int)(math.sqrt(xlen*ylen)/2)
-
         # init the env
         self.reset()
 

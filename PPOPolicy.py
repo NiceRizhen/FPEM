@@ -39,14 +39,16 @@ class Policy_net:
         with tf.variable_scope(name):
             self.obs = tf.placeholder(dtype=tf.float32, shape=[None, k * ob_space], name='obs')
             with tf.variable_scope('policy_net'):
-                layer_1 = tf.layers.dense(inputs=self.obs, units=units, activation=activation)
-                layer_2 = tf.layers.dense(inputs=layer_1, units=units, activation=activation)
-                self.act_probs = tf.layers.dense(inputs=layer_2, units=act_space, activation=tf.nn.softmax)
+                layer_1 = tf.layers.dense(inputs=self.obs, units=units * 2, activation=activation)
+                layer_2 = tf.layers.dense(inputs=layer_1, units=units * 2, activation=activation)
+                layer_3 = tf.layers.dense(inputs=layer_2, units=units, activation=activation)
+                self.act_probs = tf.layers.dense(inputs=layer_3, units=act_space, activation=tf.nn.softmax)
 
             with tf.variable_scope('value_net'):
-                layer_1 = tf.layers.dense(inputs=self.obs, units=units, activation=activation)
-                layer_2 = tf.layers.dense(inputs=layer_1, units=units, activation=activation)
-                self.v_preds = tf.layers.dense(inputs=layer_2, units=1, activation=None)
+                layer_1 = tf.layers.dense(inputs=self.obs, units=units * 2, activation=activation)
+                layer_2 = tf.layers.dense(inputs=layer_1, units=units * 2, activation=activation)
+                layer_3 = tf.layers.dense(inputs=layer_2, units=units, activation=activation)
+                self.v_preds = tf.layers.dense(inputs=layer_3, units=1, activation=None)
 
             self.act_stochastic = tf.multinomial(tf.log(self.act_probs), num_samples=1)
             self.act_stochastic = tf.reshape(self.act_stochastic, shape=[-1])
@@ -99,12 +101,12 @@ class PPOTrain:
         self.sess = sess
         self.gamma = gamma
         self.lamda = 1.
-        self.batch_size = 64
+        self.batch_size = 32
         self.epoch_num = 20
         self.clip_value = clip_value
         self.c_1 = c_1
         self.c_2 = c_2
-        self.adam_lr = 1e-5
+        self.adam_lr = 2e-5
         self.adam_epsilon = 1e-5
 
         with tf.name_scope(name):
@@ -212,7 +214,7 @@ class PPOTrain:
                                                         self.v_preds_next: v_preds_next,
                                                         self.gaes: gaes})
 
-    def ppo_train(self, observations, actions, rewards, v_preds, v_preds_next, verbose=True):
+    def ppo_train(self, observations, actions, rewards, v_preds, v_preds_next, verbose=False):
         if verbose:
             print('PPO train now..........')
         gaes = self.get_gaes(rewards=rewards, v_preds=v_preds, v_preds_next=v_preds_next)
@@ -252,11 +254,6 @@ class PPOTrain:
 
 class PPOPolicy(policy):
 
-    '''
-      agent : Agent name, different from model name
-              We typically use agent name to infer this agent was trained with whom,
-              while model name to infer the degree of our training
-    '''
     def __init__(self,
                  k=1,
                  state_dim=8*4,
@@ -264,6 +261,15 @@ class PPOPolicy(policy):
                  model_path='model/latest.cpkt',
                  is_continuing=False,
                  is_training=True):
+
+        '''
+        :param k: K-steps
+        :param state_dim: here we use one-hot
+        :param log_path:
+        :param model_path:
+        :param is_continuing: if continuing, we will create log and load model
+        :param is_training: if training and not continuing, we won't load model
+        '''
 
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
@@ -372,29 +378,28 @@ class PPOPolicy(policy):
         self.v_memory.clear()
 
     def train(self, final_obs):
-        print('training')
+
         with self.sess.as_default():
             with self.graph.as_default():
 
-
-                print('get v')
                 # compute the v of last obs
                 # this obs was missed when done==True
                 act, v = self.get_action_value(final_obs)
 
                 # get v_next list
                 v_next = self.v_memory[1:] + [v]
+                obs_m = self.obs_memory.copy()
+                act_m = self.action_memory.copy()
+                reward_m = self.reward_memory.copy()
+                v_m = self.v_memory.copy()
 
-                summary = self.PPOTrain.ppo_train(self.obs_memory, self.action_memory, self.reward_memory, self.v_memory, v_next)
+                summary = self.PPOTrain.ppo_train(obs_m, act_m, reward_m, v_m, v_next)
 
                 self.n_training += 1
 
-                print('add summary')
                 self.summary.add_summary(summary, self.n_training)
 
-                print('empty')
                 self.empty_memory()
-                print('add summary and empty end')
 
     def save_model(self, path='model/latest.cpkt'):
         with self.sess.as_default():
