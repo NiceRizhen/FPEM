@@ -273,7 +273,7 @@ class PPOPolicy(policy):
 
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
-        self.history_obs   = []
+        self.history_obs   = deque(maxlen=k)
         self.obs_memory    = []
         self.action_memory = []
         self.reward_memory = []
@@ -312,7 +312,6 @@ class PPOPolicy(policy):
 
         if not self.is_training:
             self.history_obs.append(state)
-            self.history_obs.pop(0)
             k_obs = np.array([])
             for obs in self.history_obs:
                 k_obs = np.hstack((k_obs, obs))
@@ -334,7 +333,6 @@ class PPOPolicy(policy):
 
         if not self.is_training:
             self.history_obs.append(state)
-            self.history_obs.pop(0)
             k_obs = np.array([])
             for obs in self.history_obs:
                 k_obs = np.hstack((k_obs, obs))
@@ -355,7 +353,6 @@ class PPOPolicy(policy):
     def save_transition(self, obs, action, reward, v):
 
         self.history_obs.append(obs)
-        self.history_obs.pop(0)
         k_obs = np.array([])
         for o in self.history_obs:
             k_obs = np.hstack((k_obs, o))

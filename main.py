@@ -8,6 +8,7 @@
     IDE            : PyCharm
 
 '''
+import os
 import math
 from RandomPolicy import RandomPolicy
 from GameEnv import Game
@@ -54,9 +55,12 @@ if __name__ == '__main__':
     pi_ppo = PPOPolicy(log_path='model/logs/', k=4)
 
     epoch = 0
+    all_t = 0
+    t = 0
 
-    while True:
+    while epoch < 400000:
 
+        all_t += t
         t = 0
         epoch += 1
         #print('reset')
@@ -95,5 +99,9 @@ if __name__ == '__main__':
 
         pi_ppo.empty_memory()
 
-        if epoch % 20000 == 0:
-            pi_ppo.save_model('model/ppo-{0}.ckpt'.format(epoch))
+        if epoch % 40000 == 0:
+            pi_ppo.save_model('model/ppo-{0}(4).ckpt'.format(epoch))
+            os.mkdir('{0}:{1}'.format(epoch, all_t))
+
+
+    os.system('poweroff')
