@@ -102,7 +102,7 @@ class PPOTrain:
         self.gamma = gamma
         self.lamda = 1.
         self.batch_size = 32
-        self.epoch_num = 20
+        self.epoch_num = 10
         self.clip_value = clip_value
         self.c_1 = c_1
         self.c_2 = c_2
@@ -176,13 +176,13 @@ class PPOTrain:
             self.train_op = optimizer.minimize(self.total_loss, var_list=pi_trainable)
 
     def train(self, obs, actions, gaes, rewards, v_preds_next):
-        _, total_loss = self.sess.run([self.train_op, self.total_loss], feed_dict={self.Policy.obs: obs,
+        summary, _, total_loss = self.sess.run([self.merged, self.train_op, self.total_loss], feed_dict={self.Policy.obs: obs,
                                                                                    self.Old_Policy.obs: obs,
                                                                                    self.actions: actions,
                                                                                    self.rewards: rewards,
                                                                                    self.v_preds_next: v_preds_next,
                                                                                    self.gaes: gaes})
-        return total_loss
+        return summary
 
     def get_summary(self, obs, actions, gaes, rewards, v_preds_next):
         return self.sess.run(self.merged, feed_dict={self.Policy.obs: obs,
@@ -214,49 +214,49 @@ class PPOTrain:
                                                         self.v_preds_next: v_preds_next,
                                                         self.gaes: gaes})
 
-    def ppo_train(self, observations, actions, rewards, v_preds, v_preds_next, verbose=False):
+    def ppo_train(self, observations, actions, rewards, gaes, v_preds_next, verbose=False):
         if verbose:
             print('PPO train now..........')
-        gaes = self.get_gaes(rewards=rewards, v_preds=v_preds, v_preds_next=v_preds_next)
-
-        # convert list to numpy array for feeding tf.placeholder
-        observations = np.array(observations).astype(dtype=np.float32)
-        actions = np.array(actions).astype(dtype=np.int32)
-        gaes = np.array(gaes).astype(dtype=np.float32)
-        gaes = (gaes - gaes.mean()) / gaes.std()
-        gaes = np.squeeze(gaes)
-        rewards = np.array(rewards).astype(dtype=np.float32)
-        v_preds_next = np.array(v_preds_next).astype(dtype=np.float32)
-        inp = [observations, actions, gaes, rewards, v_preds_next]
 
         self.assign_policy_parameters()
-        # train
-        for epoch in range(self.epoch_num):
-            # sample indices from [low, high)
-            sample_indices = np.random.randint(low=0, high=observations.shape[0], size=self.batch_size)
-            sampled_inp = [np.take(a=a, indices=sample_indices, axis=0) for a in inp]  # sample training data
-            total_loss = self.train(obs=sampled_inp[0],
-                                    actions=sampled_inp[1],
-                                    gaes=sampled_inp[2],
-                                    rewards=sampled_inp[3],
-                                    v_preds_next=sampled_inp[4])
-            if verbose:
-                print('total_loss:', total_loss)
 
-        summary = self.get_summary(obs=inp[0],
-                                   actions=inp[1],
-                                   gaes=inp[2],
-                                   rewards=inp[3],
-                                   v_preds_next=inp[4])
+        dataset = tf.data.Dataset.from_tensor_slices(
+            {
+                'obs' :observations,
+                'act': actions,
+                'gaes': gaes,
+                'reward': rewards,
+                'v_next':v_preds_next
+            }
+        )
+        dataset = dataset.shuffle(buffer_size=10000).batch(128).repeat(self.epoch_num)
+        iteration = dataset.make_one_shot_iterator()
+
+        one_batch = iteration.get_next()
+
+        try:
+            while True:
+                batch = self.sess.run(one_batch)
+                summary = self.train(obs=batch['obs'],
+                           actions=batch['act'],
+                           gaes=batch['gaes'],
+                           rewards=batch['reward'],
+                           v_preds_next=batch['v_next'])
+
+                yield summary
+
+        except tf.errors.OutOfRangeError:
+            pass
+
+
         if verbose:
             print('PPO train end..........')
-        return summary
 
 class PPOPolicy(policy):
 
     def __init__(self,
                  k=1,
-                 state_dim=8*4,
+                 state_dim=8*5,
                  log_path='model/logs/',
                  model_path='model/latest.cpkt',
                  is_continuing=False,
@@ -273,16 +273,25 @@ class PPOPolicy(policy):
 
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
+
+        # trajectory data
         self.history_obs   = deque(maxlen=k)
+        self.traj_obs      = []
+        self.traj_act      = []
+        self.traj_reward   = []
+        self.traj_v        = []
+
+        # training data
         self.obs_memory    = []
-        self.action_memory = []
+        self.act_memory    = []
         self.reward_memory = []
-        self.v_memory      = []
+        self.v_next_memory = []
+        self.gaes_memory   = np.array([]).astype(np.float32)
 
         self.k = k
         self.is_training = is_training
         self.state_dim = state_dim
-        self.empty_memory()
+        self.empty_all_memory()
 
         with self.graph.as_default():
 
@@ -350,53 +359,88 @@ class PPOPolicy(policy):
 
         return action, value
 
-    def save_transition(self, obs, action, reward, v):
+    def save_transition(self, obs, next_obs, action, reward, v, done):
 
-        self.history_obs.append(obs)
-        k_obs = np.array([])
-        for o in self.history_obs:
-            k_obs = np.hstack((k_obs, o))
+        if not done:
+            self.history_obs.append(obs)
+            k_obs = np.array([])
+            for o in self.history_obs:
+                k_obs = np.hstack((k_obs, o))
 
-        self.obs_memory.append(k_obs)
-        self.action_memory.append(action)
-        self.reward_memory.append(reward)
-        self.v_memory.append(v)
+            self.traj_obs.append(k_obs)
+            self.traj_act.append(action)
+            self.traj_reward.append(reward)
+            self.traj_v.append(v)
 
-    def empty_memory(self):
+        # if done: add this trajectory to memory
+        else:
+            self.obs_memory = self.obs_memory+self.traj_obs
+            self.act_memory = self.act_memory + self.traj_act
+            self.reward_memory = self.reward_memory + self.traj_reward
+
+            # compute the v of last obs
+            # this obs was missed when done==True
+            act, v = self.get_action_value(next_obs)
+            traj_v_next = self.traj_v[1:] + [v]
+            traj_reward = self.traj_reward.copy()
+            traj_v = self.traj_v.copy()
+
+            gaes = self.PPOTrain.get_gaes(traj_reward, traj_v, traj_v_next)
+            gaes = np.array(gaes).astype(dtype=np.float32)
+            gaes = (gaes - gaes.mean()) / gaes.std()
+            gaes = np.squeeze(gaes)
+
+            self.gaes_memory = np.hstack((self.gaes_memory,gaes))
+            self.v_next_memory = self.v_next_memory + traj_v_next
+
+            self.empty_traj_memory()
+
+    def empty_traj_memory(self):
 
         self.history_obs.clear()
         for i in range(self.k):
             zero_state = np.zeros([self.state_dim])
             self.history_obs.append(zero_state)
 
-        self.obs_memory.clear()
-        self.action_memory.clear()
-        self.reward_memory.clear()
-        self.v_memory.clear()
+        self.traj_obs.clear()
+        self.traj_act.clear()
+        self.traj_reward.clear()
+        self.traj_v.clear()
 
-    def train(self, final_obs):
+    def empty_all_memory(self):
+        self.history_obs.clear()
+        for i in range(self.k):
+            zero_state = np.zeros([self.state_dim])
+            self.history_obs.append(zero_state)
+
+        self.traj_obs.clear()
+        self.traj_act.clear()
+        self.traj_reward.clear()
+        self.traj_v.clear()
+
+        self.obs_memory.clear()
+        self.act_memory.clear()
+        self.reward_memory.clear()
+        self.gaes_memory = np.array([]).astype(np.float32)
+        self.v_next_memory.clear()
+
+    def train(self):
 
         with self.sess.as_default():
             with self.graph.as_default():
 
-                # compute the v of last obs
-                # this obs was missed when done==True
-                act, v = self.get_action_value(final_obs)
+                # convert list to numpy array
+                observations = np.array(self.obs_memory).astype(dtype=np.float32).copy()
+                actions = np.array(self.act_memory).astype(dtype=np.int32).copy()
+                gaes = self.gaes_memory.copy()
+                rewards = np.array(self.reward_memory).astype(dtype=np.float32).copy()
+                v_preds_next = np.array(self.v_next_memory).astype(dtype=np.float32).copy()
 
-                # get v_next list
-                v_next = self.v_memory[1:] + [v]
-                obs_m = self.obs_memory.copy()
-                act_m = self.action_memory.copy()
-                reward_m = self.reward_memory.copy()
-                v_m = self.v_memory.copy()
+                for s in self.PPOTrain.ppo_train(observations, actions, rewards, gaes, v_preds_next):
+                    self.summary.add_summary(s, self.n_training)
+                    self.n_training += 1
 
-                summary = self.PPOTrain.ppo_train(obs_m, act_m, reward_m, v_m, v_next)
-
-                self.n_training += 1
-
-                self.summary.add_summary(summary, self.n_training)
-
-                self.empty_memory()
+                self.empty_all_memory()
 
     def save_model(self, path='model/latest.cpkt'):
         with self.sess.as_default():
