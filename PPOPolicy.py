@@ -4,9 +4,9 @@
 
 '''
 
-import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# import os
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import copy
 import numpy as np
@@ -23,7 +23,7 @@ ACTIONS = [MOVE_UP, MOVE_DOWN, MOVE_LEFT, MOVE_RIGHT]
 
 class Policy_net:
 
-    def  __init__(self, name: str, sess, ob_space, act_space, k=1, activation=tf.nn.relu, units=128):
+    def  __init__(self, name: str, sess, ob_space, act_space, k=1, activation=tf.nn.relu, units=128, trainable=True):
         '''
         Network of PPO algorithm
         :param k: history used
@@ -39,16 +39,16 @@ class Policy_net:
         with tf.variable_scope(name):
             self.obs = tf.placeholder(dtype=tf.float32, shape=[None, k * ob_space], name='obs')
             with tf.variable_scope('policy_net'):
-                layer_1 = tf.layers.dense(inputs=self.obs, units=units * 2, activation=activation)
-                layer_2 = tf.layers.dense(inputs=layer_1, units=units * 2, activation=activation)
-                layer_3 = tf.layers.dense(inputs=layer_2, units=units, activation=activation)
-                self.act_probs = tf.layers.dense(inputs=layer_3, units=act_space, activation=tf.nn.softmax)
+                layer_1 = tf.layers.dense(inputs=self.obs, units=units * 2, activation=activation, trainable=trainable)
+                layer_2 = tf.layers.dense(inputs=layer_1, units=units * 2, activation=activation, trainable=trainable)
+                layer_3 = tf.layers.dense(inputs=layer_2, units=units, activation=activation, trainable=trainable)
+                self.act_probs = tf.layers.dense(inputs=layer_3, units=act_space, activation=tf.nn.softmax, trainable=trainable)
 
             with tf.variable_scope('value_net'):
-                layer_1 = tf.layers.dense(inputs=self.obs, units=units * 2, activation=activation)
-                layer_2 = tf.layers.dense(inputs=layer_1, units=units * 2, activation=activation)
-                layer_3 = tf.layers.dense(inputs=layer_2, units=units, activation=activation)
-                self.v_preds = tf.layers.dense(inputs=layer_3, units=1, activation=None)
+                layer_1 = tf.layers.dense(inputs=self.obs, units=units * 2, activation=activation, trainable=trainable)
+                layer_2 = tf.layers.dense(inputs=layer_1, units=units * 2, activation=activation, trainable=trainable)
+                layer_3 = tf.layers.dense(inputs=layer_2, units=units, activation=activation, trainable=trainable)
+                self.v_preds = tf.layers.dense(inputs=layer_3, units=1, activation=None, trainable=trainable)
 
             self.act_stochastic = tf.multinomial(tf.log(self.act_probs), num_samples=1)
             self.act_stochastic = tf.reshape(self.act_stochastic, shape=[-1])
@@ -101,7 +101,7 @@ class PPOTrain:
         self.sess = sess
         self.gamma = gamma
         self.lamda = 1.
-        self.batch_size = 32
+        self.batch_size = 128
         self.epoch_num = 10
         self.clip_value = clip_value
         self.c_1 = c_1
@@ -229,13 +229,13 @@ class PPOTrain:
                 'v_next':v_preds_next
             }
         )
-        dataset = dataset.shuffle(buffer_size=10000).batch(128).repeat(self.epoch_num)
+        dataset = dataset.shuffle(buffer_size=10000).batch(self.batch_size).repeat(self.epoch_num)
         iteration = dataset.make_one_shot_iterator()
 
         one_batch = iteration.get_next()
 
-        try:
-            while True:
+        while True:
+            try:
                 batch = self.sess.run(one_batch)
                 summary = self.train(obs=batch['obs'],
                            actions=batch['act'],
@@ -245,9 +245,10 @@ class PPOTrain:
 
                 yield summary
 
-        except tf.errors.OutOfRangeError:
-            pass
+            except tf.errors.OutOfRangeError:
+                break
 
+        print('an iteration ends')
 
         if verbose:
             print('PPO train end..........')
@@ -270,7 +271,6 @@ class PPOPolicy(policy):
         :param is_continuing: if continuing, we will create log and load model
         :param is_training: if training and not continuing, we won't load model
         '''
-
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
 
@@ -294,9 +294,9 @@ class PPOPolicy(policy):
         self.empty_all_memory()
 
         with self.graph.as_default():
-
-            self.pi = Policy_net('policy', self.sess, state_dim, len(ACTIONS), k)
-            self.old_pi = Policy_net('old_policy', self.sess, state_dim, len(ACTIONS), k)
+            #with tf.device('/gpu:0'):
+            self.pi = Policy_net('policy', self.sess, state_dim, len(ACTIONS), k, trainable=True)
+            self.old_pi = Policy_net('old_policy', self.sess, state_dim, len(ACTIONS), k, trainable=False)
 
             self.PPOTrain = PPOTrain('train', self.sess, self.pi, self.old_pi)
 
@@ -304,18 +304,19 @@ class PPOPolicy(policy):
 
         with self.sess.as_default():
             with self.graph.as_default():
+                #with tf.device('/cpu:0'):
                 if is_training or is_continuing:
                     self.summary = tf.summary.FileWriter(log_path, self.sess.graph)
 
                 # just using model
                 if is_continuing or not is_training:
-                    self.saver = tf.train.Saver()
+                    self.saver = tf.train.Saver(self.pi.get_variables())
                     self.load_model(model_path)
 
                 # a totally new model
                 else:
                     self.sess.run(tf.global_variables_initializer())
-                    self.saver = tf.train.Saver()
+                    self.saver = tf.train.Saver(self.pi.get_variables())
 
     def choose_action(self, state):
 
@@ -359,7 +360,7 @@ class PPOPolicy(policy):
 
         return action, value
 
-    def save_transition(self, obs, next_obs, action, reward, v, done):
+    def save_transition(self, obs, next_obs, action, reward, v, done, t):
 
         if not done:
             self.history_obs.append(obs)
@@ -374,24 +375,39 @@ class PPOPolicy(policy):
 
         # if done: add this trajectory to memory
         else:
-            self.obs_memory = self.obs_memory+self.traj_obs
-            self.act_memory = self.act_memory + self.traj_act
-            self.reward_memory = self.reward_memory + self.traj_reward
 
-            # compute the v of last obs
-            # this obs was missed when done==True
-            act, v = self.get_action_value(next_obs)
-            traj_v_next = self.traj_v[1:] + [v]
-            traj_reward = self.traj_reward.copy()
-            traj_v = self.traj_v.copy()
+            if t >= 2:
+                self.history_obs.append(obs)
+                k_obs = np.array([])
+                for o in self.history_obs:
+                    k_obs = np.hstack((k_obs, o))
 
-            gaes = self.PPOTrain.get_gaes(traj_reward, traj_v, traj_v_next)
-            gaes = np.array(gaes).astype(dtype=np.float32)
-            gaes = (gaes - gaes.mean()) / gaes.std()
-            gaes = np.squeeze(gaes)
+                self.traj_obs.append(k_obs)
+                self.traj_act.append(action)
+                self.traj_reward.append(reward)
+                self.traj_v.append(v)
 
-            self.gaes_memory = np.hstack((self.gaes_memory,gaes))
-            self.v_next_memory = self.v_next_memory + traj_v_next
+
+                self.obs_memory = self.obs_memory+self.traj_obs
+                self.act_memory = self.act_memory + self.traj_act
+                self.reward_memory = self.reward_memory + self.traj_reward
+
+                # compute the v of last obs
+                # this obs was missed when done==True
+                act, v = self.get_action_value(next_obs)
+                traj_v_next = self.traj_v[1:] + [v]
+                traj_reward = self.traj_reward.copy()
+                traj_v = self.traj_v.copy()
+
+                gaes = self.PPOTrain.get_gaes(traj_reward, traj_v, traj_v_next)
+                gaes = np.array(gaes).astype(dtype=np.float32)
+                gaes = (gaes - gaes.mean()) / gaes.std()
+                gaes = np.squeeze(gaes)
+
+                self.gaes_memory = np.hstack((self.gaes_memory,gaes))
+                self.v_next_memory = self.v_next_memory + traj_v_next
+            else:
+                pass
 
             self.empty_traj_memory()
 
