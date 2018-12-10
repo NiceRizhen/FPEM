@@ -29,6 +29,7 @@ class Maze(tk.Tk, object):
         self.title('Grid World')
         self.geometry('{0}x{1}'.format(MAZE_H * UNIT, MAZE_H * UNIT))
         self.wall = []
+        self.treasure = []
         self._build_maze(space)
 
     def _build_maze(self, space):
@@ -63,10 +64,10 @@ class Maze(tk.Tk, object):
                 # create treasure
                 elif space[x, y] == TREASURE:
                     oval_center = origin + np.array([UNIT * y, UNIT * x])
-                    self.oval = self.canvas.create_oval(
+                    self.treasure.append(self.canvas.create_oval(
                         oval_center[0] - 15, oval_center[1] - 15,
                         oval_center[0] + 15, oval_center[1] + 15,
-                        fill='yellow')
+                        fill='yellow'))
 
                 # create players
                 elif space[x, y] == OPPONENT:
@@ -87,7 +88,7 @@ class Maze(tk.Tk, object):
         # pack all
         self.canvas.pack()
 
-    def step(self, action1, action2):
+    def step(self, action1, action2, who_takes):
         s1 = self.canvas.coords(self.player1)
         s2 = self.canvas.coords(self.player2)
 
@@ -122,26 +123,34 @@ class Maze(tk.Tk, object):
                 base_action2[0] += UNIT
 
         self.canvas.move(self.player1, base_action1[0], base_action1[1])  # move player1
-        self.canvas.move(self.player2, base_action2[0], base_action2[1])  # move player1
+        self.canvas.move(self.player2, base_action2[0], base_action2[1])  # move player2
 
         s_1 = self.canvas.coords(self.player1)  # next state
         s_2 = self.canvas.coords(self.player2)  # next state
 
-        done = False
-        if s_1 == self.canvas.coords(self.oval):
-            done = True
-        elif s_1 in [self.canvas.coords(wal) for wal in self.wall]:
+        for tr in self.treasure:
+            if s_1 == self.canvas.coords(tr):
+                self.canvas.delete(tr)
+
+            elif s_2 == self.canvas.coords(tr):
+                self.canvas.delete(tr)
+
+        if s_1 in [self.canvas.coords(wal) for wal in self.wall]:
             self.canvas.move(self.player1, -base_action1[0], -base_action1[1])
 
-        if s_2 == self.canvas.coords(self.oval):
-            done = True
-        elif s_2 in [self.canvas.coords(wal) for wal in self.wall]:
+        if s_2 in [self.canvas.coords(wal) for wal in self.wall]:
             self.canvas.move(self.player2, -base_action2[0], -base_action2[1])
 
-        return done
+        if who_takes == 1:
+            self.canvas.itemconfig(self.player1, fill='yellow')
+            self.canvas.itemconfig(self.player2, fill='blue')
+        if who_takes == 2:
+            self.canvas.itemconfig(self.player1, fill='red')
+            self.canvas.itemconfig(self.player2, fill='yellow')
+
 
     def render(self):
-        time.sleep(0.1)
+        time.sleep(0.15)
         self.update()
 
 if __name__ == '__main__':
@@ -150,7 +159,8 @@ if __name__ == '__main__':
     ga = Game(8,8)
 
     pi_random = RandomPolicy()
-    pi_ppo = PPOPolicy(is_training=False, model_path='model/ppo-20000.ckpt')
+    #pi_ppo = PPOPolicy(is_training=False, model_path='model/log/k=4,400000epoch/ppo-400000(4).ckpt', k=4)
+    pi_ppo = RandomPolicy()
 
     while True:
         s, space = ga.reset()
@@ -162,17 +172,19 @@ if __name__ == '__main__':
             env.render()
             a1 = pi_random.choose_action(s1)
             a2 = pi_ppo.choose_action(s2)
-            _ = env.step(a1, a2)
+            env.step(a1, a2, ga.who_takes_it)
 
             s1_,s2_,r1,r2,done = ga.step(a1,a2)
 
             s1 = s1_
             s2 = s2_
             t += 1
-            if t > 1500:
+            if t > 100:
                 break
 
             if done:
+                env.render()
+                time.sleep(0.2)
                 break
 
         env.destroy()
