@@ -25,7 +25,7 @@ if __name__ == '__main__':
         # when iteration == 0 , we don't need to choose
         if iteration == 0:
 
-            while epoch < 20000:
+            while epoch < 30000:
                 t = 0
                 epoch += 1
                 s, space = env.reset()
@@ -48,7 +48,6 @@ if __name__ == '__main__':
                     t += 1
 
                     if t > 200:
-                        epoch -= 1
                         np1.empty_traj_memory()
                         np2.empty_traj_memory()
                         break
@@ -60,10 +59,8 @@ if __name__ == '__main__':
                     np1.train()
                     np2.train()
 
-
             np1.save_model('model/1/{0}.ckpt'.format(iteration))
             np2.save_model('model/2/{0}.ckpt'.format(iteration))
-
 
         else:
 
@@ -74,7 +71,7 @@ if __name__ == '__main__':
 
                 # for player1
                 flag1 = False
-                if random.uniform() > 0.5:
+                if random.uniform(0,1) > 0.5:
                     p1_time += 1
                     pi1 = np1
                     flag1 = True
@@ -83,7 +80,7 @@ if __name__ == '__main__':
 
                 # for player2
                 flag2 = False
-                if random.uniform() > 0.5:
+                if random.uniform(0,1) > 0.5:
                     p2_time += 1
                     pi2 = np2
                     flag2 = True
@@ -98,9 +95,9 @@ if __name__ == '__main__':
 
                 # run this epoch
                 while True:
-                    a1, v1 = np1.get_action_value(s1)
+                    a1, v1 = pi1.get_action_value(s1)
 
-                    a2, v2 = np2.get_action_value(s2)
+                    a2, v2 = pi2.get_action_value(s2)
 
                     s1_, s2_, r1, r2, done = env.step(a1, a2)
 
@@ -116,7 +113,6 @@ if __name__ == '__main__':
                     t += 1
 
                     if t > 200:
-                        epoch -= 1
                         np1.empty_traj_memory()
                         np2.empty_traj_memory()
                         break
@@ -132,3 +128,8 @@ if __name__ == '__main__':
 
             np1.save_model('model/1/{0}.ckpt'.format(iteration))
             np2.save_model('model/2/{0}.ckpt'.format(iteration))
+
+        np1.empty_all_memory()
+        np2.empty_all_memory()
+        policy_set1.append(np1)
+        policy_set2.append(np2)
