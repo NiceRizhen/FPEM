@@ -220,33 +220,74 @@ class PPOTrain:
 
         self.assign_policy_parameters()
 
-        dataset = tf.data.Dataset.from_tensor_slices(
-            {
-                'obs' :observations,
-                'act': actions,
-                'gaes': gaes,
-                'reward': rewards,
-                'v_next':v_preds_next
-            }
-        )
-        dataset = dataset.shuffle(buffer_size=10000).batch(self.batch_size).repeat(self.epoch_num)
-        iteration = dataset.make_one_shot_iterator()
+        # this method finds to be memory occupied
+        # dataset = tf.data.Dataset.from_tensor_slices(
+        #     {
+        #         'obs' :observations,
+        #         'act': actions,
+        #         'gaes': gaes,
+        #         'reward': rewards,
+        #         'v_next':v_preds_next
+        #     }
+        # )
+        # dataset = dataset.repeat(self.epoch_num).shuffle(buffer_size=10000).batch(self.batch_size)
+        # iteration = dataset.make_one_shot_iterator()
+        #
+        # one_batch = iteration.get_next()
+        #
+        # while True:
+        #     try:
+        #         batch = self.sess.run(one_batch)
+        #         summary = self.train(obs=batch['obs'],
+        #                    actions=batch['act'],
+        #                    gaes=batch['gaes'],
+        #                    rewards=batch['reward'],
+        #                    v_preds_next=batch['v_next'])
+        #
+        #         yield summary
+        #
+        #     except tf.errors.OutOfRangeError:
+        #         break
 
-        one_batch = iteration.get_next()
+        '''
+          0-160: observations
+          160-161:actions
+          161-162:rewards
+          162-163:gaes
+          163-164:v_preds_next
+        '''
+        actions = actions[:,np.newaxis]
+        rewards = rewards[:,np.newaxis]
+        gaes = gaes[:,np.newaxis]
+        v_preds_next = v_preds_next[:,np.newaxis]
 
-        while True:
-            try:
-                batch = self.sess.run(one_batch)
-                summary = self.train(obs=batch['obs'],
-                           actions=batch['act'],
-                           gaes=batch['gaes'],
-                           rewards=batch['reward'],
-                           v_preds_next=batch['v_next'])
+        dataset = np.hstack((observations, actions, rewards, gaes, v_preds_next))
+        np.random.shuffle(dataset)
 
+        observations = dataset[:, :180]
+        actions = dataset[:, -4]
+        rewards = dataset[:, -3]
+        gaes = dataset[:, -2]
+        v_preds_next = dataset[:, -1]
+
+        actions = np.squeeze(actions)
+        rewards = np.squeeze(rewards)
+        gaes = np.squeeze(gaes)
+        v_preds_next = np.squeeze(v_preds_next)
+
+        l = len(actions)
+        for i in range(self.epoch_num):
+            start = 0
+            end = start+self.batch_size
+            while end < l:
+                summary = self.train(observations[start:end],
+                                     actions[start:end],
+                                     gaes[start:end],
+                                     rewards[start:end],
+                                     v_preds_next[start:end])
                 yield summary
-
-            except tf.errors.OutOfRangeError:
-                break
+                start += self.batch_size
+                end += self.batch_size
 
         print('an iteration ends')
 
@@ -257,7 +298,7 @@ class PPOPolicy(policy):
 
     def __init__(self,
                  k=1,
-                 state_dim=8*5,
+                 state_dim=9*5,
                  log_path='model/logs/',
                  model_path='model/latest.cpkt',
                  is_continuing=False,
@@ -272,6 +313,8 @@ class PPOPolicy(policy):
         :param is_training: if training and not continuing, we won't load model
         '''
         self.graph = tf.Graph()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
         self.sess = tf.Session(graph=self.graph)
 
         # trajectory data
@@ -310,13 +353,13 @@ class PPOPolicy(policy):
 
                 # just using model
                 if is_continuing or not is_training:
-                    self.saver = tf.train.Saver(self.pi.get_variables())
+                    self.saver = tf.train.Saver(self.pi.get_trainable_variables())
                     self.load_model(model_path)
 
                 # a totally new model
                 else:
                     self.sess.run(tf.global_variables_initializer())
-                    self.saver = tf.train.Saver(self.pi.get_variables())
+                    self.saver = tf.train.Saver(self.pi.get_trainable_variables())
 
     def choose_action(self, state):
 
@@ -387,7 +430,6 @@ class PPOPolicy(policy):
                 self.traj_reward.append(reward)
                 self.traj_v.append(v)
 
-
                 self.obs_memory = self.obs_memory+self.traj_obs
                 self.act_memory = self.act_memory + self.traj_act
                 self.reward_memory = self.reward_memory + self.traj_reward
@@ -424,15 +466,8 @@ class PPOPolicy(policy):
         self.traj_v.clear()
 
     def empty_all_memory(self):
-        self.history_obs.clear()
-        for i in range(self.k):
-            zero_state = np.zeros([self.state_dim])
-            self.history_obs.append(zero_state)
 
-        self.traj_obs.clear()
-        self.traj_act.clear()
-        self.traj_reward.clear()
-        self.traj_v.clear()
+        self.empty_traj_memory()
 
         self.obs_memory.clear()
         self.act_memory.clear()
