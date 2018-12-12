@@ -3,6 +3,7 @@
   generating basic policy with Residual Method
 '''
 
+import time
 from GameEnv import Game
 import random
 from PPOPolicy import PPOPolicy
@@ -10,7 +11,7 @@ from PPOPolicy import PPOPolicy
 if __name__ == '__main__':
     policy_set1 = []
     policy_set2 = []
-    MAX = 20
+    MAX = 8
 
     env = Game(8,8)
 
@@ -25,7 +26,7 @@ if __name__ == '__main__':
         # when iteration == 0 , we don't need to choose
         if iteration == 0:
 
-            while epoch < 30000:
+            while epoch < 50000:
                 t = 0
                 epoch += 1
                 s, space = env.reset()
@@ -64,8 +65,8 @@ if __name__ == '__main__':
 
         else:
 
-            p1_time = 0
-            p2_time = 0
+            p1_time = 1
+            p2_time = 1
 
             while epoch < 20000:
 
@@ -121,15 +122,19 @@ if __name__ == '__main__':
                         break
 
                 if p1_time % 100 == 0:
+                    p1_time += 1
                     np1.train()
 
                 if p2_time % 100 == 0:
+                    p2_time += 1
                     np2.train()
 
-            np1.save_model('model/1/{0}.ckpt'.format(iteration))
-            np2.save_model('model/2/{0}.ckpt'.format(iteration))
+            np1.save_model('model/1-1/{0}.ckpt'.format(iteration))
+            np2.save_model('model/2-1/{0}.ckpt'.format(iteration))
 
         np1.empty_all_memory()
         np2.empty_all_memory()
         policy_set1.append(np1)
         policy_set2.append(np2)
+
+        time.sleep(1200)

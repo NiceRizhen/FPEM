@@ -87,7 +87,7 @@ class Policy_net:
 
 class PPOTrain:
 
-    def __init__(self, name, sess, Policy, Old_Policy, gamma=0.98, clip_value=0.2, c_1=0.5, c_2=0.05):
+    def __init__(self, name, sess, Policy, Old_Policy, gamma=0.9, clip_value=0.2, c_1=0.5, c_2=0.05):
         """
         :param Policy:
         :param Old_Policy:
@@ -403,8 +403,10 @@ class PPOPolicy(policy):
 
         return action, value
 
+    # a transition should be saved by calling this function
     def save_transition(self, obs, next_obs, action, reward, v, done, t):
 
+        # just save this transition
         if not done:
             self.history_obs.append(obs)
             k_obs = np.array([])
