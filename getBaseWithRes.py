@@ -1,6 +1,8 @@
 '''
   We typically use this file to implement
-  generating basic policy with Residual Method
+  generating base policy with Residual Method
+
+  @Author: Jingcheng Pang
 '''
 
 import time
@@ -11,7 +13,7 @@ from PPOPolicy import PPOPolicy
 if __name__ == '__main__':
     policy_set1 = []
     policy_set2 = []
-    MAX = 8
+    MAX = 5
 
     env = Game(8,8)
 
@@ -26,7 +28,7 @@ if __name__ == '__main__':
         # when iteration == 0 , we don't need to choose
         if iteration == 0:
 
-            while epoch < 50000:
+            while epoch < 125000:
                 t = 0
                 epoch += 1
                 s, space = env.reset()
@@ -60,15 +62,15 @@ if __name__ == '__main__':
                     np1.train()
                     np2.train()
 
-            np1.save_model('model/1/{0}.ckpt'.format(iteration))
-            np2.save_model('model/2/{0}.ckpt'.format(iteration))
+            np1.save_model('model/1-3(150000)/{0}.ckpt'.format(iteration))
+            np2.save_model('model/2-3(150000)/{0}.ckpt'.format(iteration))
 
         else:
 
             p1_time = 1
             p2_time = 1
 
-            while epoch < 20000:
+            while epoch < 150000:
 
                 # for player1
                 flag1 = False
@@ -129,12 +131,12 @@ if __name__ == '__main__':
                     p2_time += 1
                     np2.train()
 
-            np1.save_model('model/1-1/{0}.ckpt'.format(iteration))
-            np2.save_model('model/2-1/{0}.ckpt'.format(iteration))
+            np1.save_model('model/1-3(150000)/{0}.ckpt'.format(iteration+1))
+            np2.save_model('model/2-3(150000)/{0}.ckpt'.format(iteration+1))
 
         np1.empty_all_memory()
         np2.empty_all_memory()
         policy_set1.append(np1)
         policy_set2.append(np2)
 
-        time.sleep(1200)
+        time.sleep(900)

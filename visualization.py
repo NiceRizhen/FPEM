@@ -1,6 +1,8 @@
 '''
   This files contains visualization functions
   for observing the performance of our policy.
+
+  @Author: Jingcheng Pang
 '''
 
 import time
@@ -142,11 +144,11 @@ class Maze(tk.Tk, object):
             self.canvas.move(self.player2, -base_action2[0], -base_action2[1])
 
         if who_takes == 1:
-            self.canvas.itemconfig(self.player1, fill='yellow')
-            self.canvas.itemconfig(self.player2, fill='blue')
+            self.canvas.itemconfig(self.player1, fill='yellow', outline='red', width=10)
+            self.canvas.itemconfig(self.player2, fill='blue', width = 0)
         if who_takes == 2:
-            self.canvas.itemconfig(self.player1, fill='red')
-            self.canvas.itemconfig(self.player2, fill='yellow')
+            self.canvas.itemconfig(self.player1, fill='red', width = 0)
+            self.canvas.itemconfig(self.player2, fill='yellow', outline='blue', width=10)
 
 
     def render(self):
@@ -158,9 +160,8 @@ if __name__ == '__main__':
 
     ga = Game(8,8)
 
-    pi_random = RandomPolicy()
-    #pi_ppo = PPOPolicy(is_training=False, model_path='model/log/k=4,400000epoch/ppo-400000(4).ckpt', k=4)
-    pi_ppo = RandomPolicy()
+    pi_random = PPOPolicy(is_training=False, model_path='model/1-3(150000)/0.ckpt', k=4)
+    pi_ppo = PPOPolicy(is_training=False, model_path='model/2-3(150000)/2.ckpt', k=4)
 
     while True:
         s, space = ga.reset()
