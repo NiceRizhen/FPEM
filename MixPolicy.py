@@ -5,10 +5,12 @@
 '''
 
 
+
 import numpy as np
 from GameEnv import Game
 from PPOPolicy import PPOPolicy
-from multiprocessing import Pool
+from multiprocessing import Process, Pool
+from collections import deque
 
 def evaluate_Mixpolicy(ps1, w1, ps2, w2, re1, re2):
 
@@ -38,10 +40,29 @@ def evaluate_Mixpolicy(ps1, w1, ps2, w2, re1, re2):
         p1 = ps1[index1]
         p2 = ps2[index2]
 
+        p1_state = deque(maxlen=4)
+        p2_state = deque(maxlen=4)
+
+        for i in range(4):
+            zero_state = np.zeros([45])
+            p1_state.append(zero_state)
+            p2_state.append(zero_state)
+
         while True:
 
-            a1 = p1.choose_action(s1)
-            a2 = p2.choose_action(s2)
+            p1_state.append(s1)
+            p2_state.append(s2)
+
+            state1 = np.array([])
+            for obs in p1_state:
+                state1 = np.hstack((state1, obs))
+
+            state2 = np.array([])
+            for obs in p2_state:
+                state2 = np.hstack((state2, obs))
+
+            a1 = p1.choose_action_full_state(state1)
+            a2 = p2.choose_action_full_state(state2)
 
             s1_, s2_, r1, r2, done = env.step(a1, a2)
 
@@ -58,6 +79,9 @@ def evaluate_Mixpolicy(ps1, w1, ps2, w2, re1, re2):
             if done:
                 break
 
+        p1_state.clear()
+        p2_state.clear()
+
         if done:
             reward1[index1] += sum(episode1)
             select_n1[index1] += 1
@@ -73,7 +97,6 @@ def evaluate_Mixpolicy(ps1, w1, ps2, w2, re1, re2):
 
     re1.append(reward1)
     re2.append(reward2)
-
 
 def compute_entropy(data0, _w):
     # sample numbers and policy numbers
@@ -92,7 +115,7 @@ def compute_entropy(data0, _w):
 
     e=(-1.0/np.log(n))*np.sum(data*np.log(a),axis=0)
 
-    # uodate weight
+    # update weight
     w=((1-e)*_w)/np.sum((1-e)*_w)
 
     return w
@@ -127,9 +150,24 @@ if __name__ == "__main__":
     iterations = 0
     while True:
 
+        iterations += 1
+
         # init evaluate reward
         reward1 = []
         reward2 = []
+
+        # process_list = []
+        #
+        # for i in range(K):
+        #     process_list.append(
+        #         Process(target=evaluate_Mixpolicy, args=(policy_set1,w1, policy_set2,w2, reward1, reward2,))
+        #     )
+        #
+        # for p in process_list:
+        #     p.start()
+        #
+        # for p in process_list:
+        #     p.join()
 
         p = Pool(processes=3)
         for i in range(K):
@@ -147,8 +185,6 @@ if __name__ == "__main__":
         # optimize weight2
         w2 = compute_entropy(data2, w2)
 
-        print('iteration(s):{0}'.format(iterations+1))
-        print('weight1 : ' + w1)
-        print('weight2 : ' + w2)
-
-        iterations += 1
+        print('iteration(s):{0}'.format(iterations))
+        print('weight1 : ', w1)
+        print('weight2 : ', w2)

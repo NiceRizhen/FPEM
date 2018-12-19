@@ -361,6 +361,14 @@ class PPOPolicy(policy):
                     self.sess.run(tf.global_variables_initializer())
                     self.saver = tf.train.Saver(self.pi.get_trainable_variables())
 
+    def choose_action_full_state(self, state):
+
+        with self.sess.as_default():
+            with self.graph.as_default():
+                action, value = self.pi.act(state)
+
+        return action
+
     def choose_action(self, state):
 
         if not self.is_training:

@@ -11,6 +11,7 @@ import tkinter as tk
 from GameEnv import Game
 from PPOPolicy import PPOPolicy
 from RandomPolicy import RandomPolicy
+from collections import deque
 
 # visualization params
 UNIT   = 40
@@ -160,8 +161,8 @@ if __name__ == '__main__':
 
     ga = Game(8,8)
 
-    pi_random = PPOPolicy(is_training=False, model_path='model/1-3(150000)/0.ckpt', k=4)
-    pi_ppo = PPOPolicy(is_training=False, model_path='model/2-3(150000)/2.ckpt', k=4)
+    pi1 = PPOPolicy(is_training=False, model_path='model/2-3(150000)/1.ckpt', k=4)
+    pi2 = PPOPolicy(is_training=False, model_path='model/2-3(150000)/5.ckpt', k=4)
 
     while True:
         s, space = ga.reset()
@@ -169,10 +170,31 @@ if __name__ == '__main__':
         s2 = s[1]
         env = Maze(space)
         t = 0
+
+        p1_state = deque(maxlen=4)
+        p2_state = deque(maxlen=4)
+
+        for i in range(4):
+            zero_state = np.zeros([45])
+            p1_state.append(zero_state)
+            p2_state.append(zero_state)
+
         while True:
             env.render()
-            a1 = pi_random.choose_action(s1)
-            a2 = pi_ppo.choose_action(s2)
+
+            p1_state.append(s1)
+            p2_state.append(s2)
+
+            state1 = np.array([])
+            for obs in p1_state:
+                state1 = np.hstack((state1, obs))
+
+            state2 = np.array([])
+            for obs in p2_state:
+                state2 = np.hstack((state2, obs))
+
+            a1 = pi1.choose_action_full_state(state1)
+            a2 = pi2.choose_action_full_state(state2)
             env.step(a1, a2, ga.who_takes_it)
 
             s1_,s2_,r1,r2,done = ga.step(a1,a2)
@@ -189,3 +211,4 @@ if __name__ == '__main__':
                 break
 
         env.destroy()
+
