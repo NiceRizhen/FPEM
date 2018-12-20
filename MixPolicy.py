@@ -166,7 +166,7 @@ class evaluate_obj():
                 p.join()
 
         # print iteration information
-        reward = sum(reward)
+        reward = sum(reward)/K
 
         return -reward
 
@@ -198,7 +198,7 @@ if __name__ == "__main__":
         # optimize player2's weight
         print('optimize weight2')
         _eva_class2.set_w(_best_w1)
-        obj = Objective(_eva_class1, Dimension(dim, [[0, 1]] * dim, [True] * dim))
+        obj = Objective(_eva_class2.evaluate, Dimension(dim, [[0, 1]] * dim, [True] * dim))
         solution = Opt.min(obj, Parameter(budget=4 * dim))
         solution.print_solution()
         _last_w2 = _best_w2
