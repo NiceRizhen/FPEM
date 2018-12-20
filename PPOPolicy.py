@@ -8,6 +8,9 @@
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
 import copy
 import numpy as np
 import tensorflow as tf
@@ -313,9 +316,9 @@ class PPOPolicy(policy):
         :param is_training: if training and not continuing, we won't load model
         '''
         self.graph = tf.Graph()
-        config = tf.ConfigProto()
+        config = tf.ConfigProto(allow_soft_placement=True)
         config.gpu_options.allow_growth = True
-        self.sess = tf.Session(graph=self.graph)
+        self.sess = tf.Session(graph=self.graph, config=config)
 
         # trajectory data
         self.history_obs   = deque(maxlen=k)
