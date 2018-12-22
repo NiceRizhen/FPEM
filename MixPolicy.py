@@ -10,6 +10,7 @@ from PPOPolicy import PPOPolicy
 from multiprocessing import Process, Manager
 from collections import deque
 from zoopt import Dimension, Objective, Parameter, Opt
+import time
 
 class evaluate_obj():
 
@@ -51,7 +52,7 @@ class evaluate_obj():
         reward = 0
 
         epoch = 0
-        while epoch < 1500:
+        while epoch < 1000:
             t = 0
             episode = []
             epoch += 1
@@ -114,7 +115,7 @@ class evaluate_obj():
             if done:
                 reward += sum(episode)
 
-        reward = reward/150
+        reward = reward/100
         re.append(reward)
 
         del env
@@ -132,7 +133,7 @@ class evaluate_obj():
         manager = Manager()
 
         # processes number
-        K = 4
+        K = 6
 
         # init evaluate reward
         reward = manager.list([])
@@ -170,6 +171,15 @@ class evaluate_obj():
 
         return -reward
 
+def Manhattan(w1, w2):
+    l = len(w1)
+
+    distance = 0
+    for i in range(l):
+        distance += abs(w1[i] - w2[i])
+
+    return distance
+
 
 if __name__ == "__main__":
     dim = 5  # dimension
@@ -183,23 +193,28 @@ if __name__ == "__main__":
     _last_w2 = [0.1,0.1,0.1,0.1,0.1]
 
     iteration = 1
-    while True:
+    while Manhattan(_best_w1, _last_w1) > 0.1 and Manhattan(_best_w2, _last_w2) > 0.1:
         print('iteration:{0}'.format(iteration))
 
         # optimize player1's weight
         print('optimize weight1')
         _eva_class1.set_w(_best_w2)
         obj = Objective(_eva_class1.evaluate, Dimension(dim, [[0, 1]] * dim, [True] * dim))
-        solution = Opt.min(obj, Parameter(budget=4 * dim))
+        solution = Opt.min(obj, Parameter(algorithm='racos', budget=12 * dim))
         solution.print_solution()
         _last_w1 = _best_w1
         _best_w1 = solution.get_x()
+        _best_w1 = [a / sum(_best_w1) for a in _best_w1]
 
         # optimize player2's weight
         print('optimize weight2')
         _eva_class2.set_w(_best_w1)
         obj = Objective(_eva_class2.evaluate, Dimension(dim, [[0, 1]] * dim, [True] * dim))
-        solution = Opt.min(obj, Parameter(budget=4 * dim))
+        solution = Opt.min(obj, Parameter(algorithm='racos', budget=12 * dim))
         solution.print_solution()
         _last_w2 = _best_w2
         _best_w2 = solution.get_x()
+        _best_w2 = [a / sum(_best_w2) for a in _best_w2]
+
+        iteration += 1
+        time.sleep(300)
