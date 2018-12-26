@@ -67,7 +67,7 @@ class Policy_net:
 
 class PPOTrain:
 
-    def __init__(self, name, sess, Policy, Old_Policy, policy_n, gamma=0.9, clip_value=0.2, c_1=0.5, c_2=0.05):
+    def __init__(self, name, sess, Policy, Old_Policy, policy_n, gamma=0.9, clip_value=0.2, c_1=1., c_2=0.01):
         """
         :param Policy:
         :param Old_Policy:
@@ -80,13 +80,13 @@ class PPOTrain:
         self.Old_Policy = Old_Policy
         self.sess = sess
         self.gamma = gamma
-        self.lamda = 1.
-        self.batch_size = 128
+        self.lamda = 0.95
+        self.batch_size = 256
         self.epoch_num = 10
         self.clip_value = clip_value
         self.c_1 = c_1
         self.c_2 = c_2
-        self.adam_lr = 2e-5
+        self.adam_lr = 2e-4
         self.adam_epsilon = 1e-5
 
         with tf.name_scope(name):

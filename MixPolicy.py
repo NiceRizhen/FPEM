@@ -498,6 +498,7 @@ if __name__ == "__main__":
     _train_num = 1000
     who_is_training = 1
     _save_num = 40000
+    _save_times = 1
 
     while True:
         t = 0
@@ -591,9 +592,9 @@ if __name__ == "__main__":
             epoch += 1
 
         if epoch % _save_num == 0:
-            mix_policy1.save_model('model/mix/p1/')
-            mix_policy2.save_model('model/mix/p2/')
-
+            mix_policy1.save_model('model/mix/p1/{0}.ckpt'.format(_save_times))
+            mix_policy2.save_model('model/mix/p2/{0}.ckpt'.format(_save_times))
+            _save_times += 1
 
 # mix policy by policy
 # if __name__ == "__main__":
