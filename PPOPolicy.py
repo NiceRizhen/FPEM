@@ -140,6 +140,14 @@ class PPOTrain:
                 loss_clip = -tf.reduce_mean(loss_clip)
                 self.sum_clip = tf.summary.scalar('loss_clip', loss_clip)
 
+                self.sum_policy_w = tf.summary.histogram('policy_weight',
+                                                         self.sess.graph.get_tensor_by_name(
+                                                             'policy/policy_net/dense/kernel:0'))
+
+                self.sum_value_w = tf.summary.histogram('value_weight',
+                                                        self.sess.graph.get_tensor_by_name(
+                                                            'policy/value_net/dense/kernel:0'))
+
                 # construct computation graph for loss of entropy bonus
                 entropy = -tf.reduce_sum(self.Policy.act_probs *
                                          tf.log(tf.clip_by_value(self.Policy.act_probs, 1e-10, 1.0)), axis=1)
@@ -159,7 +167,7 @@ class PPOTrain:
                 self.g = tf.reduce_sum(self.rewards)
                 self.sum_g = tf.summary.scalar('return', self.g)
 
-            self.merged = tf.summary.merge([self.sum_clip, self.sum_vf, self.sum_loss, self.sum_g, self.sum_entropy])
+            self.merged = tf.summary.merge_all()#([self.sum_clip, self.sum_vf, self.sum_loss, self.sum_g, self.sum_entropy, self.sum_value_w, self.sum_policy_w])
             optimizer = tf.train.AdamOptimizer(learning_rate=self.adam_lr, epsilon=self.adam_epsilon)
 
             self.gradients = optimizer.compute_gradients(self.total_loss, var_list=pi_trainable)
@@ -376,6 +384,18 @@ class PPOPolicy(policy):
 
         return action
 
+    # to get action with full state
+    def get_action_full_state(self, state):
+        if state.shape[0] != 1:
+            state = state[np.newaxis,:]
+
+        with self.sess.as_default():
+            with self.graph.as_default():
+                action, value = self.pi.act(state)
+
+        return action
+
+    # to get the action prob with full state
     def get_action_prob_full_state(self, state):
         if state.shape[0] != 1:
             state = state[np.newaxis,:]
