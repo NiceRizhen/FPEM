@@ -28,24 +28,7 @@ class Policy_net:
                 layer_1 = tf.layers.dense(inputs=self.obs, units=units * 2, activation=activation, trainable=trainable)
                 self.v_preds = tf.layers.dense(inputs=layer_1, units=1, activation=None, trainable=trainable)
 
-            self.act_stochastic = tf.multinomial(tf.log(self.weight), num_samples=1)
-            self.act_stochastic = tf.reshape(self.act_stochastic, shape=[-1])
-
             self.scope = tf.get_variable_scope().name
-
-    def act(self, obs, verbose=False):
-        obs = np.array(obs)
-
-        if obs.shape[0] != 1:
-            obs = obs[np.newaxis, :]
-
-        act, v_preds = self.sess.run([self.act_stochastic, self.v_preds],
-                                                feed_dict={self.obs: obs})
-
-        if verbose:
-            print('act:{0}'.format(act))
-            print('v_preds:', v_preds)
-        return act[0], v_preds[0,0]
 
     def act_prob(self, obs):
         obs = np.array(obs)
@@ -76,6 +59,7 @@ class PPOTrain:
         :param c_1: parameter for value difference
         :param c_2: parameter for entropy bonus
         """
+        
         self.Policy = Policy
         self.Old_Policy = Old_Policy
         self.sess = sess
@@ -86,8 +70,8 @@ class PPOTrain:
         self.clip_value = clip_value
         self.c_1 = c_1
         self.c_2 = c_2
-        self.adam_lr = 2e-4
-        self.adam_epsilon = 1e-5
+        self.adam_lr = 1e-4
+        self.adam_epsilon = 1e-6
 
         with tf.name_scope(name):
             pi_trainable = self.Policy.get_trainable_variables()
@@ -106,45 +90,53 @@ class PPOTrain:
                 self.gaes = tf.placeholder(dtype=tf.float32, shape=[None], name='gaes')
                 self.act_prob = tf.placeholder(tf.float32, [None, policy_n], name='act_prob')
 
-            weight = self.Policy.weight
-            weight_old = self.Old_Policy.weight
-
             # probabilities of actions which agent took with weight weighted
-            p = tf.reduce_sum(tf.multiply(weight, self.act_prob), axis=1)
+            p = tf.reduce_sum(tf.multiply(self.Policy.weight, self.act_prob), axis=1, name='prob')
 
             # probabilities of actions which agent took with old weight weighted
-            p_old = tf.reduce_sum(tf.multiply(weight_old, self.act_prob), axis=1)
+            p_old = tf.reduce_sum(tf.multiply(self.Old_Policy.weight, self.act_prob), axis=1, name='old_prob')
 
             with tf.variable_scope('loss'):
-                # construct computation graph for loss_clip
-                ratios = tf.exp(tf.log(tf.clip_by_value(p, 1e-10, 1.0))
-                                - tf.log(tf.clip_by_value(p_old, 1e-10, 1.0)))
-                clipped_ratios = tf.clip_by_value(ratios, clip_value_min = 1 - self.clip_value,
-                                                  clip_value_max = 1 + self.clip_value)
-                loss_clip = tf.minimum(tf.multiply(self.gaes, ratios), tf.multiply(self.gaes, clipped_ratios))
-                loss_clip = -tf.reduce_mean(loss_clip)
-                self.sum_clip = tf.summary.scalar('loss_clip', loss_clip)
+
+                with tf.variable_scope('clip_loss'):
+                    # construct computation graph for loss_clip
+                    ratios = tf.exp(tf.log(tf.clip_by_value(p, 1e-10, 1)) -
+                                    tf.log(tf.clip_by_value(p_old, 1e-10, 1)), name='ratios')
+                    clipped_ratios = tf.clip_by_value(ratios, clip_value_min = 1 - clip_value, clip_value_max = 1 + clip_value, name='clip_ratios')
+                    loss_clip = tf.minimum(tf.multiply(self.gaes, ratios), tf.multiply(self.gaes, clipped_ratios))
+                    loss_clip = -tf.reduce_mean(loss_clip)
+                    self.sum_clip = tf.summary.scalar('loss_clip', loss_clip)
+
+                self.sum_policy_w = tf.summary.histogram('policy_weight',
+                                                       self.sess.graph.get_tensor_by_name(
+                                                           'policy/policy_net/dense/kernel:0'))
+
+                self.sum_value_w = tf.summary.histogram('value_weight',
+                                                         self.sess.graph.get_tensor_by_name(
+                                                             'policy/value_net/dense/kernel:0'))
 
                 # construct computation graph for loss of entropy bonus
-                entropy = -tf.reduce_sum(self.Policy.weight *
-                                         tf.log(tf.clip_by_value(self.Policy.weight, 1e-10, 1.0)), axis=1)
-                entropy = tf.reduce_mean(entropy, axis=0)  # mean of entropy of pi(obs)
-                self.sum_entropy = tf.summary.scalar('entropy', entropy)
+                # entropy = -tf.reduce_sum(self.Policy.weight *
+                #                          tf.log(tf.clip_by_value(self.Policy.weight, 1e-10, 1.0)), axis=1)
+                # entropy = tf.reduce_mean(entropy, axis=0)  # mean of entropy of pi(obs)
+                # self.sum_entropy = tf.summary.scalar('entropy', entropy)
 
-                # construct computation graph for loss of value function
-                v_preds = self.Policy.v_preds
-                loss_vf = tf.squared_difference(self.rewards + self.gamma * self.v_preds_next, v_preds)
-                loss_vf = tf.reduce_mean(loss_vf)
-                self.sum_vf = tf.summary.scalar('value_difference', loss_vf)
+                with tf.variable_scope('value_loss'):
+                    # construct computation graph for loss of value function
+                    v_preds = self.Policy.v_preds
+                    loss_vf = tf.squared_difference(self.rewards + self.gamma * self.v_preds_next, v_preds)
+                    loss_vf = tf.reduce_mean(loss_vf)
+                    self.sum_vf = tf.summary.scalar('value_difference', loss_vf)
 
-                # construct computation graph for loss
-                self.total_loss = loss_clip + self.c_1 * loss_vf - self.c_2 * entropy
-                self.sum_loss = tf.summary.scalar('total_loss', self.total_loss)
+                with tf.variable_scope('total_loss'):
+                    # construct computation graph for loss
+                    self.total_loss = loss_clip + self.c_1 * loss_vf# - self.c_2 * entropy
+                    self.sum_loss = tf.summary.scalar('total_loss', self.total_loss)
 
                 self.g = tf.reduce_sum(self.rewards)
                 self.sum_g = tf.summary.scalar('return', self.g)
 
-            self.merged = tf.summary.merge([self.sum_clip, self.sum_vf, self.sum_loss, self.sum_g, self.sum_entropy])
+            self.merged = tf.summary.merge_all()#([self.sum_clip, self.sum_vf, self.sum_loss, self.sum_g, self.sum_policy_w, self.sum_value_w, self.sum_ratios])
             optimizer = tf.train.AdamOptimizer(learning_rate=self.adam_lr, epsilon=self.adam_epsilon)
 
             self.gradients = optimizer.compute_gradients(self.total_loss, var_list=pi_trainable)
@@ -246,7 +238,8 @@ class PPOTrain:
         if verbose:
             print('PPO train end..........')
 
-class MixPolicy(policy):
+# a mla to mix base policy by action
+class MixPolicyBA(policy):
 
     def __init__(self,
                  policy_n,
@@ -317,14 +310,6 @@ class MixPolicy(policy):
                     self.sess.run(tf.global_variables_initializer())
                     self.saver = tf.train.Saver(self.pi.get_trainable_variables())
 
-    def choose_action_full_state(self, state):
-
-        with self.sess.as_default():
-            with self.graph.as_default():
-                action, value = self.pi.act(state)
-
-        return action
-
     # get act with mix policy
     def get_act_by_prob(self, prob):
         with self.sess.as_default():
@@ -333,22 +318,6 @@ class MixPolicy(policy):
                 a = self.sess.run(self._act, feed_dict={self.pro:prob[np.newaxis,:]})
 
         return a[0]
-
-    def choose_action(self, state):
-
-        with self.sess.as_default():
-            with self.graph.as_default():
-                action, value = self.pi.act(state)
-
-        return action
-
-    def get_action_value(self, state):
-
-        with self.sess.as_default():
-            with self.graph.as_default():
-                action, value = self.pi.act(state)
-
-        return action, value
 
     def get_weight(self, state):
         with self.sess.as_default():
@@ -437,8 +406,9 @@ class MixPolicy(policy):
             with self.graph.as_default():
 
                 # convert list to numpy array
+
                 observations = np.array(self.obs_memory).astype(dtype=np.float32)
-                act_prob = np.array(self.prob_memory).astype(dtype=np.int32)
+                act_prob = np.array(self.prob_memory).astype(dtype=np.float32)
                 gaes = self.gaes_memory
                 rewards = np.array(self.reward_memory).astype(dtype=np.float32)
                 v_preds_next = np.array(self.v_next_memory).astype(dtype=np.float32)
@@ -457,4 +427,7 @@ class MixPolicy(policy):
     def load_model(self, path='model/latest.ckpt'):
         with self.sess.as_default():
             with self.graph.as_default():
+                self.saver.restore(self.sess, save_path=path)
+
+
                 self.saver.restore(self.sess, save_path=path)
