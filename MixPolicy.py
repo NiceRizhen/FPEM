@@ -262,8 +262,6 @@ if __name__ == "__main__":
     p1_state = deque(maxlen=4)
     p2_state = deque(maxlen=4)
 
-    time.sleep(600)
-
     # set training params
     epoch = 1
     _train_num = 500
@@ -364,4 +362,3 @@ if __name__ == "__main__":
             mix_policy2.save_model('model/mix/p2ba/{0}.ckpt'.format(_save_times))
             epoch += 1
             _save_times += 1
-            time.sleep(600)
