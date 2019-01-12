@@ -2,11 +2,8 @@
     The policy for both self and opponent
     Based on PPO algorithm (OpenAI)
 
-'''
 
-# import os
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+'''
 
 import copy
 import numpy as np
@@ -64,7 +61,7 @@ class Policy_net:
         act, v_preds = self.sess.run([self.act_stochastic, self.v_preds],
                                                 feed_dict={self.obs: obs})
 
-        return act[0], v_preds[0,0]
+        return act[0], v_preds[0, 0]
 
     def get_action_prob(self, obs):
         return self.sess.run(self.act_probs, feed_dict={self.obs: obs})
@@ -78,7 +75,7 @@ class Policy_net:
 
 class PPOTrain:
 
-    def __init__(self, name, sess, Policy, Old_Policy, gamma=0.9, clip_value=0.2, c_1=0.5, c_2=0.05):
+    def __init__(self, name, sess, Policy, Old_Policy, gamma=0.99, clip_value=0.2, c_1=0.5, c_2=0.05):
         """
         :param Policy:
         :param Old_Policy:
@@ -91,14 +88,14 @@ class PPOTrain:
         self.Old_Policy = Old_Policy
         self.sess = sess
         self.gamma = gamma
-        self.lamda = 1.
-        self.batch_size = 128
+        self.lamda = 0.95
+        self.batch_size = 256
         self.epoch_num = 10
         self.clip_value = clip_value
         self.c_1 = c_1
         self.c_2 = c_2
-        self.adam_lr = 2e-5
-        self.adam_epsilon = 1e-5
+        self.adam_lr = 1e-4
+        self.adam_epsilon = 1e-6
 
         with tf.name_scope(name):
             pi_trainable = self.Policy.get_trainable_variables()
@@ -196,7 +193,6 @@ class PPOTrain:
         return self.sess.run(self.assign_ops)
 
 
-    # discount reward
     def get_gaes(self, rewards, v_preds, v_preds_next):
         deltas = [r_t + self.gamma * v_next - v for r_t, v_next, v in zip(rewards, v_preds_next, v_preds)]
         # calculate generative advantage estimator(lambda = 1), see ppo paper eq(11)
@@ -219,51 +215,23 @@ class PPOTrain:
 
         self.assign_policy_parameters()
 
-        # this method finds to be memory occupied
-        # dataset = tf.data.Dataset.from_tensor_slices(
-        #     {
-        #         'obs' :observations,
-        #         'act': actions,
-        #         'gaes': gaes,
-        #         'reward': rewards,
-        #         'v_next':v_preds_next
-        #     }
-        # )
-        # dataset = dataset.repeat(self.epoch_num).shuffle(buffer_size=10000).batch(self.batch_size)
-        # iteration = dataset.make_one_shot_iterator()
-        #
-        # one_batch = iteration.get_next()
-        #
-        # while True:
-        #     try:
-        #         batch = self.sess.run(one_batch)
-        #         summary = self.train(obs=batch['obs'],
-        #                    actions=batch['act'],
-        #                    gaes=batch['gaes'],
-        #                    rewards=batch['reward'],
-        #                    v_preds_next=batch['v_next'])
-        #
-        #         yield summary
-        #
-        #     except tf.errors.OutOfRangeError:
-        #         break
-
-        '''
-          0-160: observations
-          160-161:actions
-          161-162:rewards
-          162-163:gaes
-          163-164:v_preds_next
-        '''
         actions = actions[:,np.newaxis]
         rewards = rewards[:,np.newaxis]
         gaes = gaes[:,np.newaxis]
         v_preds_next = v_preds_next[:,np.newaxis]
 
+        print(observations.shape)
+        print(actions.shape)
+        print(rewards.shape)
+        print(gaes.shape)
+        print(v_preds_next.shape)
+
+        # concat and shuffle
         dataset = np.hstack((observations, actions, rewards, gaes, v_preds_next))
         np.random.shuffle(dataset)
 
-        observations = dataset[:, :180]
+        # recover
+        observations = dataset[:, :164]
         actions = dataset[:, -4]
         rewards = dataset[:, -3]
         gaes = dataset[:, -2]
@@ -284,7 +252,7 @@ class PPOTrain:
                                      gaes[start:end],
                                      rewards[start:end],
                                      v_preds_next[start:end])
-                yield summary
+                #yield summary
                 start += self.batch_size
                 end += self.batch_size
 
@@ -297,7 +265,7 @@ class PPOPolicy(policy):
 
     def __init__(self,
                  k=1,
-                 state_dim=9*5,
+                 state_dim=41,
                  log_path='model/logs/',
                  model_path='model/latest.cpkt',
                  is_continuing=False,
@@ -311,13 +279,16 @@ class PPOPolicy(policy):
         :param is_continuing: if continuing, we will create log and load model
         :param is_training: if training and not continuing, we won't load model
         '''
+
+        self.model_path = model_path
+
         self.graph = tf.Graph()
         config = tf.ConfigProto()
+        #config.gpu_options.per_process_gpu_memory_fraction=0.2
         config.gpu_options.allow_growth = True
-        self.sess = tf.Session(graph=self.graph)
+        self.sess = tf.Session(graph=self.graph, config=config)
 
         # trajectory data
-        self.history_obs   = deque(maxlen=k)
         self.traj_obs      = []
         self.traj_act      = []
         self.traj_reward   = []
@@ -349,45 +320,26 @@ class PPOPolicy(policy):
 
         with self.sess.as_default():
             with self.graph.as_default():
-                #with tf.device('/cpu:0'):
+                # with tf.device('/cpu:0'):
                 if is_training or is_continuing:
-                    self.summary = tf.summary.FileWriter(log_path, self.sess.graph)
+                    #self.summary = tf.summary.FileWriter(log_path, self.sess.graph)
+                    pass
 
                 # just using model
                 if is_continuing or not is_training:
+                    self.sess.run(tf.global_variables_initializer())
                     self.saver = tf.train.Saver(self.pi.get_trainable_variables())
-                    self.load_model(model_path)
+                    self.load_model()
 
                 # a totally new model
                 else:
                     self.sess.run(tf.global_variables_initializer())
                     self.saver = tf.train.Saver(self.pi.get_trainable_variables())
 
-    def choose_action(self, state):
+    def get_action(self, state):
 
-        if not self.is_training:
-            self.history_obs.append(state)
-            k_obs = np.array([])
-            for obs in self.history_obs:
-                k_obs = np.hstack((k_obs, obs))
-
-        else:
-            k_obs = np.array([])
-            for i in range(1, self.k):
-                k_obs = np.hstack((k_obs, self.history_obs[i]))
-
-            k_obs = np.hstack((k_obs, state))
-
-        with self.sess.as_default():
-            with self.graph.as_default():
-                action, value = self.pi.act(k_obs)
-
-        return action
-
-    # to get action with full state
-    def get_action_full_state(self, state):
         if state.shape[0] != 1:
-            state = state[np.newaxis,:]
+            state = state[np.newaxis, :]
 
         with self.sess.as_default():
             with self.graph.as_default():
@@ -395,10 +347,21 @@ class PPOPolicy(policy):
 
         return action
 
+    def get_value(self, state):
+
+        if state.shape[0] != 1:
+            state = state[np.newaxis, :]
+
+        with self.sess.as_default():
+            with self.graph.as_default():
+                action, value = self.pi.act(state)
+
+        return value
+
     # to get the action prob with full state
     def get_action_prob_full_state(self, state):
         if state.shape[0] != 1:
-            state = state[np.newaxis,:]
+            state = state[np.newaxis, :]
 
         with self.sess.as_default():
             with self.graph.as_default():
@@ -408,29 +371,19 @@ class PPOPolicy(policy):
 
     def get_action_value(self, state):
 
-        if not self.is_training:
-            self.history_obs.append(state)
-            k_obs = np.array([])
-            for obs in self.history_obs:
-                k_obs = np.hstack((k_obs, obs))
-
-        else:
-            k_obs = np.array([])
-            for i in range(1, self.k):
-                k_obs = np.hstack((k_obs, self.history_obs[i]))
-
-            k_obs = np.hstack((k_obs, state))
+        if state.shape[0] != 1:
+            state = state[np.newaxis, :]
 
         with self.sess.as_default():
             with self.graph.as_default():
-                action, value = self.pi.act(k_obs)
+                action, value = self.pi.act(state)
 
         return action, value
 
     def get_act_by_prob(self, prob):
         with self.sess.as_default():
             with self.graph.as_default():
-                act = self.sess.run(self.act_select, feed_dict={self.act_prob:prob[np.newaxis,:]})
+                act = self.sess.run(self.act_select, feed_dict={self.act_prob: prob[np.newaxis, :]})
 
         return act[0]
 
@@ -439,12 +392,8 @@ class PPOPolicy(policy):
 
         # just save this transition
         if not done:
-            self.history_obs.append(obs)
-            k_obs = np.array([])
-            for o in self.history_obs:
-                k_obs = np.hstack((k_obs, o))
 
-            self.traj_obs.append(k_obs)
+            self.traj_obs.append(obs)
             self.traj_act.append(action)
             self.traj_reward.append(reward)
             self.traj_v.append(v)
@@ -453,12 +402,8 @@ class PPOPolicy(policy):
         else:
 
             if t >= 2:
-                self.history_obs.append(obs)
-                k_obs = np.array([])
-                for o in self.history_obs:
-                    k_obs = np.hstack((k_obs, o))
 
-                self.traj_obs.append(k_obs)
+                self.traj_obs.append(obs)
                 self.traj_act.append(action)
                 self.traj_reward.append(reward)
                 self.traj_v.append(v)
@@ -469,17 +414,17 @@ class PPOPolicy(policy):
 
                 # compute the v of last obs
                 # this obs was missed when done==True
-                act, v = self.get_action_value(next_obs)
+                act, v = self.get_action_value(np.hstack((obs[self.state_dim:], next_obs)))
                 traj_v_next = self.traj_v[1:] + [v]
                 traj_reward = self.traj_reward.copy()
                 traj_v = self.traj_v.copy()
 
                 gaes = self.PPOTrain.get_gaes(traj_reward, traj_v, traj_v_next)
                 gaes = np.array(gaes).astype(dtype=np.float32)
-                gaes = (gaes - gaes.mean()) / gaes.std()
+                gaes = (gaes - gaes.mean())/gaes.std()
                 gaes = np.squeeze(gaes)
 
-                self.gaes_memory = np.hstack((self.gaes_memory,gaes))
+                self.gaes_memory = np.hstack((self.gaes_memory, gaes))
                 self.v_next_memory = self.v_next_memory + traj_v_next
             else:
                 pass
@@ -487,11 +432,6 @@ class PPOPolicy(policy):
             self.empty_traj_memory()
 
     def empty_traj_memory(self):
-
-        self.history_obs.clear()
-        for i in range(self.k):
-            zero_state = np.zeros([self.state_dim])
-            self.history_obs.append(zero_state)
 
         self.traj_obs.clear()
         self.traj_act.clear()
@@ -508,30 +448,30 @@ class PPOPolicy(policy):
         self.gaes_memory = np.array([]).astype(np.float32)
         self.v_next_memory.clear()
 
-    def train(self):
+    def train(self, observations, actions, gaes, rewards, v_preds_next):
 
         with self.sess.as_default():
             with self.graph.as_default():
 
                 # convert list to numpy array
-                observations = np.array(self.obs_memory).astype(dtype=np.float32).copy()
-                actions = np.array(self.act_memory).astype(dtype=np.int32).copy()
-                gaes = self.gaes_memory.copy()
-                rewards = np.array(self.reward_memory).astype(dtype=np.float32).copy()
-                v_preds_next = np.array(self.v_next_memory).astype(dtype=np.float32).copy()
+                observation = np.vstack(observations).astype(np.float32)
+                action = np.hstack(actions).astype(dtype=np.int32)
+                gae = np.hstack(gaes).astype(np.float32)
+                reward = np.hstack(rewards).astype(dtype=np.float32)
+                v_pred_next = np.hstack(v_preds_next).astype(dtype=np.float32)
 
-                for s in self.PPOTrain.ppo_train(observations, actions, rewards, gaes, v_preds_next):
-                    self.summary.add_summary(s, self.n_training)
-                    self.n_training += 1
+                self.PPOTrain.ppo_train(observation, action, reward, gae, v_pred_next)
+                    # self.summary.add_summary(s, self.n_training)
+                    # self.n_training += 1
 
-                self.empty_all_memory()
+                #self.empty_all_memory()
 
-    def save_model(self, path='model/latest.cpkt'):
+    def save_model(self):
         with self.sess.as_default():
             with self.graph.as_default():
-                self.saver.save(self.sess, save_path=path)
+                self.saver.save(self.sess, save_path=self.model_path)
 
-    def load_model(self, path='model/latest.cpkt'):
+    def load_model(self):
         with self.sess.as_default():
             with self.graph.as_default():
-                self.saver.restore(self.sess, save_path=path)
+                self.saver.restore(self.sess, save_path=self.model_path)
