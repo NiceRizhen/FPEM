@@ -574,5 +574,4 @@ if __name__ == '__main__':
 
         training_process(cur_policy_n, who_is_training=2)
 
-
         print('---------iteration {0}  ends-------------'.format(cur_policy_n))
