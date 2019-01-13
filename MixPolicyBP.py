@@ -105,8 +105,8 @@ class PPOTrain:
             with tf.variable_scope('loss'):
 
                 with tf.variable_scope('weight_loss'):
-                    policy_prob = tf.reduce_sum(tf.multiply(self.Policy.policy_prob, tf.one_hot(self.policy_selected, self.Policy.policy_n)), axis=1, name='policy_prob')
-                    policy_prob_old = tf.reduce_sum(tf.multiply(self.Old_Policy.policy_prob, tf.one_hot(self.policy_selected, self.Old_Policy.policy_n)), axis=1, name='policy_prob_old')
+                    policy_prob = tf.reduce_sum(tf.multiply(self.Policy.policy_prob, tf.one_hot(self.policy_selected, self.Policy.policy_n+1)), axis=1, name='policy_prob')
+                    policy_prob_old = tf.reduce_sum(tf.multiply(self.Old_Policy.policy_prob, tf.one_hot(self.policy_selected, self.Old_Policy.policy_n+1)), axis=1, name='policy_prob_old')
 
                     # construct computation graph for weight loss
                     ratios = tf.exp(tf.log(tf.clip_by_value(policy_prob, 1e-10, 1)) -
@@ -201,11 +201,11 @@ class PPOTrain:
         gaes = gaes[:, np.newaxis]
         v_preds_next = v_preds_next[:, np.newaxis]
 
-        print(observations.shape)
-        print(policy.shape)
-        print(gaes.shape)
-        print(rewards.shape)
-        print(v_preds_next.shape)
+        #print(observations.shape)
+        #print(policy.shape)
+        #print(gaes.shape)
+        #print(rewards.shape)
+        #print(v_preds_next.shape)
 
         dataset = np.hstack((observations, policy, rewards, gaes, v_preds_next))
         np.random.shuffle(dataset)
@@ -234,11 +234,11 @@ class PPOTrain:
                                      v_preds_next[start:end],
                                      cur_policy_n = cur_policy_n)
 
-                yield summary
+                #yield summary
                 start += self.batch_size
                 end += self.batch_size
 
-        print('an iteration ends')
+        #print('an iteration ends')
 
         if verbose:
             print('PPO train end..........')
@@ -405,9 +405,9 @@ class MixPolicy(policy):
                 reward = np.hstack(rewards).astype(dtype=np.float32)
                 v_pred_next = np.hstack(v_preds_next).astype(dtype=np.float32)
 
-                for s in self.PPOTrain.ppo_train(observation, policy, reward, gae, v_pred_next, cur_policy_n):
-                    self.summary.add_summary(s, self.n_training)
-                    self.n_training += 1
+                self.PPOTrain.ppo_train(observation, policy, reward, gae, v_pred_next, cur_policy_n)
+                    # self.summary.add_summary(s, self.n_training)
+                    # self.n_training += 1
 
                 self.empty_all_memory()
 
@@ -420,113 +420,3 @@ class MixPolicy(policy):
         with self.sess.as_default():
             with self.graph.as_default():
                 self.saver.restore(self.sess, save_path=self.model_path)
-
-# mix policy by policy
-if __name__ == "__main__":
-
-    env = Game(8,8)
-
-    # set training params
-    epoch = 1
-    _train_num = 500
-    who_is_training = 1
-    _save_num = 40001
-    _save_times = 9
-
-    # get policy set
-    ps1, ps2 = [], []
-
-    for i in range(5):
-        ps1.append(
-            PPOPolicy(is_training=False, k=4, model_path='model/1-3(150000)/{0}.ckpt'.format(i + 1))
-        )
-
-        ps2.append(
-            PPOPolicy(is_training=False, k=4, model_path='model/2-3(150000)/{0}.ckpt'.format(i + 1))
-        )
-
-    ps1_n = len(ps1)
-    ps2_n = len(ps2)
-
-    mix_policy1 = MixPolicy(ps1_n, log_path='model/mix/bplog1_2', k=4, model_path='model/mix/p1bp_2/8.ckpt', is_continuing=True)
-    mix_policy2 = MixPolicy(ps2_n, log_path='model/mix/bplog2_2', k=4, model_path='model/mix/p2bp_2/8.ckpt', is_continuing=True)
-
-
-    p1_state = deque(maxlen=4)
-    p2_state = deque(maxlen=4)
-
-    while True:
-        t = 0
-
-        s, _ = env.reset()
-        s1 = s[0]
-        s2 = s[1]
-
-        for i in range(4):
-            zero_state = np.zeros([45])
-            p1_state.append(zero_state)
-            p2_state.append(zero_state)
-
-        while True:
-
-            p1_state.append(s1)
-            p2_state.append(s2)
-
-            state1 = np.array([])
-            for obs in p1_state:
-                state1 = np.hstack((state1, obs))
-
-            state2 = np.array([])
-            for obs in p2_state:
-                state2 = np.hstack((state2, obs))
-
-            pi1, v1 = mix_policy1.get_policy(state1)
-            pi2, v2 = mix_policy2.get_policy(state2)
-
-            # select action1
-            a1 = ps1[pi1].get_action_full_state(state1)
-
-            # select action2
-            a2 = ps2[pi2].get_action_full_state(state2)
-
-            s1_, s2_, r1, r2, done = env.step(a1, a2)
-
-            mix_policy1.save_transition(state1, s1_, pi1, r1, v1, done, t)
-            mix_policy2.save_transition(state2, s2_, pi2, r2, v2, done, t)
-
-            s1 = s1_
-            s2 = s2_
-            t += 1
-
-            if t > 100:
-
-                mix_policy1.empty_traj_memory()
-                mix_policy2.empty_traj_memory()
-
-                break
-
-            if done:
-                epoch += 1
-                break
-
-        p1_state.clear()
-        p2_state.clear()
-
-        if epoch % _train_num == 0 and epoch > 600:
-            if who_is_training == 1:
-                mix_policy1.train()
-                mix_policy1.empty_all_memory()
-            else:
-                mix_policy2.train()
-                mix_policy2.empty_all_memory()
-
-            who_is_training = 1 if who_is_training == 2 else 2
-
-            epoch += 1
-
-        if epoch % _save_num == 0:
-            mix_policy1.save_model('model/mix/p1bp_2/{0}.ckpt'.format(_save_times))
-            mix_policy2.save_model('model/mix/p2bp_2/{0}.ckpt'.format(_save_times))
-            epoch += 1
-            _save_times += 1
-            time.sleep(480)

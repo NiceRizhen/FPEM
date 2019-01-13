@@ -23,12 +23,14 @@ import tensorflow as tf
 # params for mix policy training
 K = 4        # combine history
 MAX_POLICY = 20
-MAX_EPOCH = 100
+MAX_EPOCH = 1
 _END_THREHOLD = 0.55
 _INDEX_THREHOLD = 0.5
 _GAMMA = 0.99
 _LAMBDA = 0.95
+_PROCESS_NUM = 2
 
+# worker for process to optimize base policy and mix policy
 def optimize_worker(cur_policy_n, who_is_training, obses, bp_actions, bp_gaes,
                     rewards, bp_v_preds_next, mp_policys, mp_gaes, mp_v_preds_next):
 
@@ -124,7 +126,7 @@ def worker(who_is_training, p1_index, p2_index, wining_rate, mutex,
 
         for i in range(p2_index + 1):
             policy_set2.append(
-                PPOPolicy(k=4, model_path='model/base_policy/2/{0}.latest.ckpt'.format(i), is_training=False)
+                PPOPolicy(k=4, model_path='model/base_policy/2/{0}/latest.ckpt'.format(i), is_training=False)
             )
         base_policy1 = PPOPolicy(is_training=False,k=4, model_path='model/base_policy/1/{0}/latest.ckpt'.format(p1_index))
 
@@ -137,7 +139,7 @@ def worker(who_is_training, p1_index, p2_index, wining_rate, mutex,
     p1_state = deque(maxlen=4)
     p2_state = deque(maxlen=4)
 
-    while epoch < 200:
+    while epoch < 3:
 
         s, space = env.reset()
         s1 = s[0]
@@ -265,6 +267,12 @@ def worker(who_is_training, p1_index, p2_index, wining_rate, mutex,
             elif done:
 
                 if t > 1:
+                    if who_is_training == 1:
+                        if traj_r1 > traj_r2:
+                            win_num += 1
+                    else:
+                        if traj_r2 > traj_r1:
+                            win_num ++ 1
                     mutex.acquire()
 
                     if who_is_training == 1:
@@ -350,7 +358,7 @@ def worker(who_is_training, p1_index, p2_index, wining_rate, mutex,
             s1 = s1_
             s2 = s2_
 
-    wining_rate.append(win_num/250)
+    wining_rate.append(win_num/100)
 
 def training_process(cur_policy_n, who_is_training):
 
@@ -388,7 +396,7 @@ def training_process(cur_policy_n, who_is_training):
             process_list = []
 
             # 4 sample processes
-            for i in range(4):
+            for i in range(_PROCESS_NUM):
                 p = Process(target=worker, args=(who_is_training,
                                                  0,
                                                  0,
@@ -410,8 +418,9 @@ def training_process(cur_policy_n, who_is_training):
             for p in process_list:
                 p.join()
 
-            wr = sum(wining_rate)/4
-
+            wr = sum(wining_rate)/_PROCESS_NUM
+            epoch += 1
+            print('player1\'s bp0 vs player1\'s bp0:{0} winning, player{1} is training!'.format(wr, who_is_training))
             optimize_by_childprocess(cur_policy_n,who_is_training,obses,bp_actions,bp_gaes,rewards,bp_v_preds_next,mp_policys,mp_gaes,mp_v_preds_next)
 
     # after first iteration
@@ -452,7 +461,7 @@ def training_process(cur_policy_n, who_is_training):
                     process_list = []
 
                     # 4 sample processes
-                    for i in range(4):
+                    for i in range(_PROCESS_NUM):
                         p = Process(target=worker, args=(who_is_training,
                                                          cur_policy_n,
                                                          policy2,
@@ -474,7 +483,9 @@ def training_process(cur_policy_n, who_is_training):
                     for p in process_list:
                         p.join()
 
-                    wr = sum(wining_rate) / 4
+                    wr = sum(wining_rate) / _PROCESS_NUM
+                    epoch += 1
+                    print('player1\'s bp{0} vs player2\'s bp{1}:{2} winning, player1 is training!'.format(cur_policy_n, policy2, wr))
 
                     optimize_by_childprocess(cur_policy_n, who_is_training,obses,bp_actions,bp_gaes,rewards,
                                              bp_v_preds_next,mp_policys,mp_gaes,mp_v_preds_next)
@@ -512,7 +523,7 @@ def training_process(cur_policy_n, who_is_training):
                     process_list = []
 
                     # 4 sample processes
-                    for i in range(4):
+                    for i in range(_PROCESS_NUM):
                         p = Process(target=worker, args=(who_is_training,
                                                          policy1,
                                                          cur_policy_n,
@@ -534,7 +545,9 @@ def training_process(cur_policy_n, who_is_training):
                     for p in process_list:
                         p.join()
 
-                    wr = sum(wining_rate) / 4
+                    wr = sum(wining_rate) / _PROCESS_NUM
+                    epoch += 1
+                    print('player1\'s bp{0} vs player2\'s bp{1}:{2} winning, player2 is training!'.format(policy1, cur_policy_n, wr))
 
                     optimize_by_childprocess(cur_policy_n, who_is_training, obses, bp_actions, bp_gaes, rewards,
                                              bp_v_preds_next, mp_policys, mp_gaes, mp_v_preds_next)
@@ -542,25 +555,25 @@ def training_process(cur_policy_n, who_is_training):
 if __name__ == '__main__':
 
 
-    # # initialize weight
+    # #initialize weight
     # mix_policy1 = MixPolicy(max_policy=MAX_POLICY, log_path='model/logs1/', k=K, model_path='model/mix/weight1/latest.ckpt')
     # mix_policy2 = MixPolicy(max_policy=MAX_POLICY, log_path='model/logs2/', k=K, model_path='model/mix/weight2/latest.ckpt')
     #
-    # # initialize base policy
+    # #initialize base policy
     # policy_set1 = []
     # policy_set2 = []
     #
     # for i in range(MAX_POLICY):
-    #     policy_set1.append(
-    #         PPOPolicy(k=K,model_path='model/base_policy/1/{0}/latest.ckpt'.format(i), log_path='model/base1_log/log{0}/'.format(i))
-    #     )
-    #     policy_set2.append(
-    #         PPOPolicy(k=K,model_path='model/base_policy/2/{0}/latest.ckpt'.format(i), log_path='model/base2_log/log{0}/'.format(i))
-    #     )
+    #    policy_set1.append(
+    #        PPOPolicy(k=K,model_path='model/base_policy/1/{0}/latest.ckpt'.format(i), log_path='model/base1_log/log{0}/'.format(i))
+    #    )
+    #    policy_set2.append(
+    #        PPOPolicy(k=K,model_path='model/base_policy/2/{0}/latest.ckpt'.format(i), log_path='model/base2_log/log{0}/'.format(i))
+    #    )
     #
     # for i in range(MAX_POLICY):
-    #     policy_set1[i].save_model()
-    #     policy_set2[i].save_model()
+    #    policy_set1[i].save_model()
+    #    policy_set2[i].save_model()
     #
     # mix_policy1.save_model()
     # mix_policy2.save_model()
@@ -574,4 +587,4 @@ if __name__ == '__main__':
 
         training_process(cur_policy_n, who_is_training=2)
 
-        print('---------iteration {0}  ends-------------'.format(cur_policy_n))
+        print('---------iteration {0}  ends---------------'.format(cur_policy_n))

@@ -11,6 +11,9 @@ import tensorflow as tf
 from BasePolicy import policy
 from collections import deque
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
 MOVE_UP    = 0
 MOVE_DOWN  = 1
 MOVE_LEFT  = 2
@@ -220,11 +223,11 @@ class PPOTrain:
         gaes = gaes[:,np.newaxis]
         v_preds_next = v_preds_next[:,np.newaxis]
 
-        print(observations.shape)
-        print(actions.shape)
-        print(rewards.shape)
-        print(gaes.shape)
-        print(v_preds_next.shape)
+        #print(observations.shape)
+        #print(actions.shape)
+        #print(rewards.shape)
+        #print(gaes.shape)
+        #print(v_preds_next.shape)
 
         # concat and shuffle
         dataset = np.hstack((observations, actions, rewards, gaes, v_preds_next))
@@ -256,7 +259,7 @@ class PPOTrain:
                 start += self.batch_size
                 end += self.batch_size
 
-        print('an iteration ends')
+        #print('an iteration ends')
 
         if verbose:
             print('PPO train end..........')
