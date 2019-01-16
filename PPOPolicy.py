@@ -61,13 +61,16 @@ class Policy_net:
         if obs.shape[0] != 1:
             obs = obs[np.newaxis, :]
 
-        act, v_preds = self.sess.run([self.act_stochastic, self.v_preds],
+        act_prob, act, v_preds = self.sess.run([self.act_probs, self.act_stochastic, self.v_preds],
                                                 feed_dict={self.obs: obs})
 
-        return act[0], v_preds[0, 0]
+        return act[0], act_prob[0][act[0]], v_preds[0, 0]
 
     def get_action_prob(self, obs):
-        return self.sess.run(self.act_probs, feed_dict={self.obs: obs})
+
+        act_prob = self.sess.run(self.act_probs, feed_dict={self.obs: obs})
+
+        return act_prob[0]
 
     def get_variables(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
@@ -140,13 +143,13 @@ class PPOTrain:
                 loss_clip = -tf.reduce_mean(loss_clip)
                 self.sum_clip = tf.summary.scalar('loss_clip', loss_clip)
 
-                self.sum_policy_w = tf.summary.histogram('policy_weight',
-                                                         self.sess.graph.get_tensor_by_name(
-                                                             'policy/policy_net/dense/kernel:0'))
-
-                self.sum_value_w = tf.summary.histogram('value_weight',
-                                                        self.sess.graph.get_tensor_by_name(
-                                                            'policy/value_net/dense/kernel:0'))
+                # self.sum_policy_w = tf.summary.histogram('policy_weight',
+                #                                          self.sess.graph.get_tensor_by_name(
+                #                                              'policy/policy_net/dense/kernel:0'))
+                #
+                # self.sum_value_w = tf.summary.histogram('value_weight',
+                #                                         self.sess.graph.get_tensor_by_name(
+                #                                             'policy/value_net/dense/kernel:0'))
 
                 # construct computation graph for loss of entropy bonus
                 entropy = -tf.reduce_sum(self.Policy.act_probs *
@@ -255,7 +258,7 @@ class PPOTrain:
                                      gaes[start:end],
                                      rewards[start:end],
                                      v_preds_next[start:end])
-                #yield summary
+                yield summary
                 start += self.batch_size
                 end += self.batch_size
 
@@ -286,7 +289,7 @@ class PPOPolicy(policy):
         self.model_path = model_path
 
         self.graph = tf.Graph()
-        config = tf.ConfigProto()
+        config = tf.ConfigProto(allow_soft_placement=True)
         #config.gpu_options.per_process_gpu_memory_fraction=0.2
         config.gpu_options.allow_growth = True
         self.sess = tf.Session(graph=self.graph, config=config)
@@ -308,87 +311,73 @@ class PPOPolicy(policy):
         self.is_training = is_training
         self.state_dim = state_dim
         self.empty_all_memory()
+        with self.sess.as_default():
+            with self.graph.as_default():
+                #with tf.device('/gpu:0'):
+                self.pi = Policy_net('policy', self.sess, state_dim, len(ACTIONS), k, trainable=True)
+                self.old_pi = Policy_net('old_policy', self.sess, state_dim, len(ACTIONS), k, trainable=False)
 
-        with self.graph.as_default():
-            #with tf.device('/gpu:0'):
-            self.pi = Policy_net('policy', self.sess, state_dim, len(ACTIONS), k, trainable=True)
-            self.old_pi = Policy_net('old_policy', self.sess, state_dim, len(ACTIONS), k, trainable=False)
+                self.PPOTrain = PPOTrain('train', self.sess, self.pi, self.old_pi)
 
-            self.PPOTrain = PPOTrain('train', self.sess, self.pi, self.old_pi)
-
-            self.n_training = 0
-            self.act_prob = tf.placeholder(tf.float32, [None, len(ACTIONS)], 'act_prob')
-            self.act_select = tf.multinomial(tf.log(self.act_prob), num_samples=1)
-            self.act_select = tf.reshape(self.act_select, shape=[-1])
+                self.n_training = 0
 
         with self.sess.as_default():
             with self.graph.as_default():
                 # with tf.device('/cpu:0'):
                 if is_training or is_continuing:
-                    #self.summary = tf.summary.FileWriter(log_path, self.sess.graph)
-                    pass
+                    self.summary = tf.summary.FileWriter(log_path, self.sess.graph)
 
+                self.saver = tf.train.Saver(self.pi.get_trainable_variables())
                 # just using model
                 if is_continuing or not is_training:
                     self.sess.run(tf.global_variables_initializer())
-                    self.saver = tf.train.Saver(self.pi.get_trainable_variables())
                     self.load_model()
 
                 # a totally new model
                 else:
                     self.sess.run(tf.global_variables_initializer())
-                    self.saver = tf.train.Saver(self.pi.get_trainable_variables())
+
 
     def get_action(self, state):
 
-        if state.shape[0] != 1:
-            state = state[np.newaxis, :]
-
         with self.sess.as_default():
             with self.graph.as_default():
-                action, value = self.pi.act(state)
+                action,_, value = self.pi.act(state)
 
         return action
 
     def get_value(self, state):
 
-        if state.shape[0] != 1:
-            state = state[np.newaxis, :]
-
         with self.sess.as_default():
             with self.graph.as_default():
-                action, value = self.pi.act(state)
+                action,_, value = self.pi.act(state)
 
         return value
 
-    # to get the action prob with full state
-    def get_action_prob_full_state(self, state):
+    def get_act_prob(self, state):
         if state.shape[0] != 1:
             state = state[np.newaxis, :]
 
         with self.sess.as_default():
             with self.graph.as_default():
-                act_prob = self.pi.get_action_prob(state).squeeze()
+                act_prob = self.pi.get_action_prob(state)
 
         return act_prob
 
     def get_action_value(self, state):
 
-        if state.shape[0] != 1:
-            state = state[np.newaxis, :]
-
         with self.sess.as_default():
             with self.graph.as_default():
-                action, value = self.pi.act(state)
+                action, act_prob, value = self.pi.act(state)
 
-        return action, value
+        return action, act_prob, value
 
-    def get_act_by_prob(self, prob):
-        with self.sess.as_default():
-            with self.graph.as_default():
-                act = self.sess.run(self.act_select, feed_dict={self.act_prob: prob[np.newaxis, :]})
-
-        return act[0]
+    # def get_act_by_prob(self, prob):
+    #     with self.sess.as_default():
+    #         with self.graph.as_default():
+    #             act = self.sess.run(self.act_select, feed_dict={self.act_prob: prob[np.newaxis, :]})
+    #
+    #     return act[0]
 
     # a transition should be saved by calling this function
     def save_transition(self, obs, next_obs, action, reward, v, done, t):
@@ -417,7 +406,7 @@ class PPOPolicy(policy):
 
                 # compute the v of last obs
                 # this obs was missed when done==True
-                act, v = self.get_action_value(np.hstack((obs[self.state_dim:], next_obs)))
+                act,_, v = self.get_action_value(np.hstack((obs[self.state_dim:], next_obs)))
                 traj_v_next = self.traj_v[1:] + [v]
                 traj_reward = self.traj_reward.copy()
                 traj_v = self.traj_v.copy()
@@ -463,9 +452,9 @@ class PPOPolicy(policy):
                 reward = np.hstack(rewards).astype(dtype=np.float32)
                 v_pred_next = np.hstack(v_preds_next).astype(dtype=np.float32)
 
-                self.PPOTrain.ppo_train(observation, action, reward, gae, v_pred_next)
-                    # self.summary.add_summary(s, self.n_training)
-                    # self.n_training += 1
+                for s in self.PPOTrain.ppo_train(observation, action, reward, gae, v_pred_next):
+                    self.summary.add_summary(s, self.n_training)
+                    self.n_training += 1
 
                 #self.empty_all_memory()
 

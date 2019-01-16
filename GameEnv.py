@@ -7,8 +7,6 @@
 
 '''
 
-
-
 import numpy as np
 import random
 import math
@@ -53,7 +51,7 @@ class Game():
         x = self.x1
         y = self.y1
 
-        obs1 = np.zeros([9,5])
+        obs1 = np.zeros([8,5])
         obs1[0, sp[x-1,y-1]] = 1
         obs1[1, sp[x-1,y]]   = 1
         obs1[2, sp[x-1,y+1]] = 1
@@ -62,12 +60,12 @@ class Game():
         obs1[5, sp[x+1,y-1]] = 1
         obs1[6, sp[x+1,y]]   = 1
         obs1[7, sp[x+1,y+1]] = 1
-        if self.who_takes_it == 1:
-            obs1[8, 1] = 1
+
+        obs1 = obs1.flatten()
 
         x = self.x2
         y = self.y2
-        obs2 = np.zeros([9,5])
+        obs2 = np.zeros([8,5])
         obs2[0, sp[x-1,y-1]] = 1
         obs2[1, sp[x-1,y]]   = 1
         obs2[2, sp[x-1,y+1]] = 1
@@ -76,8 +74,20 @@ class Game():
         obs2[5, sp[x+1,y-1]] = 1
         obs2[6, sp[x+1,y]]   = 1
         obs2[7, sp[x+1,y+1]] = 1
-        if self.who_takes_it == 2:
-            obs2[8, 1] = 1
+
+        obs2 = obs2.flatten()
+
+        if self.who_takes_it == 0:
+            obs1 = np.hstack((obs1, [0]))
+            obs2 = np.hstack((obs2, [0]))
+
+        elif self.who_takes_it == 1:
+            obs1 = np.hstack((obs1, [1]))
+            obs2 = np.hstack((obs2, [0]))
+
+        else:
+            obs1 = np.hstack((obs1, [0]))
+            obs2 = np.hstack((obs2, [1]))
 
         return obs1.flatten(), obs2.flatten()
 
@@ -94,7 +104,7 @@ class Game():
             if self.space[x+1, y] == WALL:
                 pass
             else:
-                self.space[x,y] = GROUND
+                self.space[x, y] = GROUND
                 x = x+1
 
         elif action == MOVE_LEFT:
@@ -134,27 +144,18 @@ class Game():
 
             # they both get the treasure
             if self.space[self.x1,self.y1] == TREASURE:
-                if self.treasure_n == 1:
-                    r1 += 1
-                    r2 += 1
-
-                    self.treasure_n -= 1
-
-                elif self.treasure_n == 2:
-                    r1 += 0.5
-                    r2 += 0.5
-                    self.treasure_n -= 1
+                self.treasure_n -= 1
 
             # a guy robs the other guy
             elif  self.treasure_n == 1:
                 if self.who_takes_it == 1:
                     self.who_takes_it = 2
-                    r2 += 1
-                    r1 -= 1
+                    r2 = 1
+                    r1 = -1
                 elif self.who_takes_it == 2:
                     self.who_takes_it = 1
-                    r1 += 1
-                    r2 -= 1
+                    r1 = 1
+                    r2 = -1
 
             # nothing happens
             else:
@@ -168,8 +169,7 @@ class Game():
 
             # both p1 and p2 find treasure
             if self.space[self.x1, self.y1] == TREASURE and self.space[self.x2, self.y2] == TREASURE:
-                r1 += 1.5
-                r2 += 1.5
+
                 self.treasure_n -= 2
                 self.space[self.x1, self.y1] = OPPONENT
                 self.space[self.x2, self.y2] = OPPONENT
@@ -178,8 +178,8 @@ class Game():
             elif self.space[self.x1, self.y1] == TREASURE:
                 if self.treasure_n == 1:
                     if self.who_takes_it == 1:
-                        r1 += 2
-                        r2 -= 1
+                        r1 = 2
+                        r2 = -2
                     else:
                         r1 += 1
                         r2 -= 1
@@ -189,7 +189,8 @@ class Game():
                     self.space[self.x2, self.y2] = OPPONENT
 
                 else:
-                    r1 +=1
+                    r1 = 1
+                    r2 = -1
                     self.who_takes_it = 1
                     self.treasure_n -= 1
 
@@ -200,18 +201,19 @@ class Game():
             elif self.space[self.x2, self.y2] == TREASURE:
                 if self.treasure_n == 1:
                     if self.who_takes_it == 2:
-                        r2 += 2
-                        r1 -= 1
+                        r2 = 2
+                        r1 = -2
                     else:
-                        r2 += 1
-                        r1 -= 1
+                        r2 = 1
+                        r1 = -1
 
                     self.treasure_n -= 1
                     self.space[self.x1, self.y1] = OPPONENT
                     self.space[self.x2, self.y2] = OPPONENT
 
                 else:
-                    r2 += 1
+                    r2 = 1
+                    r1 = -1
                     self.who_takes_it = 2
                     self.treasure_n -= 1
 
@@ -231,7 +233,6 @@ class Game():
                 else:
                     self.space[self.x1, self.y1] = OPPONENT
                     self.space[self.x2, self.y2] = OPPONENT
-
 
         if self.treasure_n == 0:
             done = True

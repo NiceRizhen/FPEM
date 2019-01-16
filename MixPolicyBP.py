@@ -117,14 +117,14 @@ class PPOTrain:
                     loss_clip = -tf.reduce_mean(loss_clip)
                     tf.summary.scalar('weight_loss', loss_clip)
 
-                # to show whether params are updated
-                tf.summary.histogram('policy_weight',
-                    self.sess.graph.get_tensor_by_name(
-                            'mix_policy/weight/dense/kernel:0'))
-
-                tf.summary.histogram('value_weight',
-                                        self.sess.graph.get_tensor_by_name(
-                                        'mix_policy/value_net/dense/kernel:0'))
+                # # to show whether params are updated
+                # tf.summary.histogram('policy_weight',
+                #     self.sess.graph.get_tensor_by_name(
+                #             'mix_policy/weight/dense/kernel:0'))
+                #
+                # tf.summary.histogram('value_weight',
+                #                         self.sess.graph.get_tensor_by_name(
+                #                         'mix_policy/value_net/dense/kernel:0'))
 
                 # construct computation graph for loss of entropy bonus
                 with tf.variable_scope('entropy_loss'):
@@ -234,7 +234,7 @@ class PPOTrain:
                                      v_preds_next[start:end],
                                      cur_policy_n = cur_policy_n)
 
-                #yield summary
+                yield summary
                 start += self.batch_size
                 end += self.batch_size
 
@@ -405,9 +405,9 @@ class MixPolicy(policy):
                 reward = np.hstack(rewards).astype(dtype=np.float32)
                 v_pred_next = np.hstack(v_preds_next).astype(dtype=np.float32)
 
-                self.PPOTrain.ppo_train(observation, policy, reward, gae, v_pred_next, cur_policy_n)
-                    # self.summary.add_summary(s, self.n_training)
-                    # self.n_training += 1
+                for s in self.PPOTrain.ppo_train(observation, policy, reward, gae, v_pred_next, cur_policy_n):
+                    self.summary.add_summary(s, self.n_training)
+                    self.n_training += 1
 
                 self.empty_all_memory()
 
