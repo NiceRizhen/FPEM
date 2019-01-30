@@ -47,10 +47,10 @@ class Policy_net:
         if obs.shape[0] != 1:
             obs = obs[np.newaxis, :]
 
-        policy, v = self.sess.run([self.policy_argmax, self.v_preds], feed_dict={self.obs: obs,
+        policy, policy_prob, v = self.sess.run([self.policy_argmax, self.policy_prob, self.v_preds], feed_dict={self.obs: obs,
                                                                                  self.policy_n: cur_policy_n})
 
-        return policy[0], v[0, 0]
+        return policy[0], policy_prob[0][policy[0]], v[0, 0]
 
     def get_variables(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
@@ -60,7 +60,7 @@ class Policy_net:
 
 class PPOTrain:
 
-    def __init__(self, name, sess, Policy, Old_Policy, max_policy, gamma=0.9, clip_value=0.2, c_1=1., c_2=0.01):
+    def __init__(self, name, sess, Policy, max_policy, gamma=0.9, clip_value=0.2, c_1=1., c_2=0.01):
         """
         :param Policy:
         :param Old_Policy:
@@ -71,7 +71,7 @@ class PPOTrain:
         """
 
         self.Policy = Policy
-        self.Old_Policy = Old_Policy
+        #self.Old_Policy = Old_Policy
         self.sess = sess
         self.max_policy = max_policy
         self.gamma = gamma
@@ -87,13 +87,13 @@ class PPOTrain:
 
         with tf.name_scope(name):
             pi_trainable = self.Policy.get_trainable_variables()
-            old_pi_trainable = self.Old_Policy.get_trainable_variables()
+            #old_pi_trainable = self.Old_Policy.get_trainable_variables()
 
             # assign_operations for policy parameter values to old policy parameters
-            with tf.variable_scope('assign_op'):
-                self.assign_ops = []
-                for v_old, v in zip(old_pi_trainable, pi_trainable):
-                    self.assign_ops.append(tf.assign(v_old, v))
+            # with tf.variable_scope('assign_op'):
+            #     self.assign_ops = []
+            #     for v_old, v in zip(old_pi_trainable, pi_trainable):
+            #         self.assign_ops.append(tf.assign(v_old, v))
 
             # inputs for train_op
             with tf.variable_scope('train_inp'):
@@ -101,30 +101,22 @@ class PPOTrain:
                 self.v_preds_next = tf.placeholder(dtype=tf.float32, shape=[None], name='v_preds_next')
                 self.gaes = tf.placeholder(dtype=tf.float32, shape=[None], name='gaes')
                 self.policy_selected = tf.placeholder(tf.int32, [None, ], name='policy_selected')
+                self.mu_prob = tf.placeholder(tf.float32, [None], name='mu_prob')
 
             with tf.variable_scope('loss'):
 
                 with tf.variable_scope('weight_loss'):
                     policy_prob = tf.reduce_sum(tf.multiply(self.Policy.policy_prob, tf.one_hot(self.policy_selected, self.Policy.policy_n+1)), axis=1, name='policy_prob')
-                    policy_prob_old = tf.reduce_sum(tf.multiply(self.Old_Policy.policy_prob, tf.one_hot(self.policy_selected, self.Old_Policy.policy_n+1)), axis=1, name='policy_prob_old')
+                    #policy_prob_old = tf.reduce_sum(tf.multiply(self.Old_Policy.policy_prob, tf.one_hot(self.policy_selected, self.Old_Policy.policy_n+1)), axis=1, name='policy_prob_old')
 
                     # construct computation graph for weight loss
                     ratios = tf.exp(tf.log(tf.clip_by_value(policy_prob, 1e-10, 1)) -
-                                    tf.log(tf.clip_by_value(policy_prob_old, 1e-10, 1)), name='ratios')
+                                    tf.log(tf.clip_by_value(self.mu_prob, 1e-10, 1)), name='ratios')
                     clipped_ratios = tf.clip_by_value(ratios, clip_value_min=1 - clip_value,
                                                       clip_value_max=1 + clip_value, name='clip_ratios')
                     loss_clip = tf.minimum(tf.multiply(self.gaes, ratios), tf.multiply(self.gaes, clipped_ratios))
                     loss_clip = -tf.reduce_mean(loss_clip)
                     tf.summary.scalar('weight_loss', loss_clip)
-
-                # # to show whether params are updated
-                # tf.summary.histogram('policy_weight',
-                #     self.sess.graph.get_tensor_by_name(
-                #             'mix_policy/weight/dense/kernel:0'))
-                #
-                # tf.summary.histogram('value_weight',
-                #                         self.sess.graph.get_tensor_by_name(
-                #                         'mix_policy/value_net/dense/kernel:0'))
 
                 # construct computation graph for loss of entropy bonus
                 with tf.variable_scope('entropy_loss'):
@@ -136,7 +128,8 @@ class PPOTrain:
                 with tf.variable_scope('value_loss'):
                     # construct computation graph for loss of value function
                     v_preds = self.Policy.v_preds
-                    loss_vf = tf.squared_difference(self.rewards + self.gamma * self.v_preds_next, v_preds)
+                    clip_is_ratios = tf.clip_by_value(ratios, clip_value_min=0, clip_value_max=2)
+                    loss_vf = tf.squared_difference(clip_is_ratios * (self.rewards + self.gamma * self.v_preds_next), v_preds)
                     loss_vf = tf.reduce_mean(loss_vf)
                     self.sum_vf = tf.summary.scalar('value_difference', loss_vf)
 
@@ -155,17 +148,18 @@ class PPOTrain:
 
             self.train_op = optimizer.minimize(self.total_loss, var_list=pi_trainable)
 
-    def train(self, obs, policy, gaes, rewards, v_preds_next, cur_policy_n):
+    def train(self, obs, policy, gaes, rewards, v_preds_next, cur_policy_n, mu_probs):
 
         summary, _ = self.sess.run([self.merged, self.train_op],
                                     feed_dict={self.Policy.obs:obs,
-                                               self.Old_Policy.obs:obs,
+                                               #self.Old_Policy.obs:obs,
                                                self.rewards: rewards,
                                                self.policy_selected:policy,
                                                self.v_preds_next: v_preds_next,
                                                self.gaes: gaes,
                                                self.Policy.policy_n: cur_policy_n,
-                                               self.Old_Policy.policy_n: cur_policy_n})
+                                               #self.Old_Policy.policy_n: cur_policy_n,
+                                               self.mu_prob: mu_probs})
         return summary
 
 
@@ -184,22 +178,23 @@ class PPOTrain:
 
     def get_grad(self, obs, policy, gaes, rewards, v_preds_next):
         return self.sess.run(self.gradients, feed_dict={self.Policy.obs: obs,
-                                                        self.Old_Policy.obs: obs,
+                                                        #self.Old_Policy.obs: obs,
                                                         self.policy_selected: policy,
                                                         self.rewards: rewards,
                                                         self.v_preds_next: v_preds_next,
                                                         self.gaes: gaes})
 
-    def ppo_train(self, observations, policy, rewards, gaes, v_preds_next, cur_policy_n, verbose=False):
+    def ppo_train(self, observations, policy, rewards, gaes, v_preds_next, cur_policy_n, mu_probs, verbose=False):
         if verbose:
             print('PPO train now..........')
 
-        self.assign_policy_parameters()
+        #self.assign_policy_parameters()
 
         rewards = rewards[:, np.newaxis]
         policy = policy[:, np.newaxis]
         gaes = gaes[:, np.newaxis]
         v_preds_next = v_preds_next[:, np.newaxis]
+        mu_probs = mu_probs[:, np.newaxis]
 
         #print(observations.shape)
         #print(policy.shape)
@@ -207,19 +202,21 @@ class PPOTrain:
         #print(rewards.shape)
         #print(v_preds_next.shape)
 
-        dataset = np.hstack((observations, policy, rewards, gaes, v_preds_next))
+        dataset = np.hstack((observations, policy, rewards, gaes, v_preds_next, mu_probs))
         np.random.shuffle(dataset)
 
-        observations = dataset[:, :164]
-        policy = dataset[:, -4]
-        rewards = dataset[:, -3]
-        gaes = dataset[:, -2]
-        v_preds_next = dataset[:, -1]
+        observations = dataset[:, :61]
+        policy = dataset[:, -5]
+        rewards = dataset[:, -4]
+        gaes = dataset[:, -3]
+        v_preds_next = dataset[:, -2]
+        mu_probs = dataset[:, -1]
 
         rewards = np.squeeze(rewards)
         policy = np.squeeze(policy)
         gaes = np.squeeze(gaes)
         v_preds_next = np.squeeze(v_preds_next)
+        mu_probs = np.squeeze(mu_probs)
 
         l = len(rewards)
         for i in range(self.epoch_num):
@@ -232,7 +229,9 @@ class PPOTrain:
                                      gaes[start:end],
                                      rewards[start:end],
                                      v_preds_next[start:end],
-                                     cur_policy_n = cur_policy_n)
+                                     cur_policy_n = cur_policy_n,
+                                     mu_probs=mu_probs[start:end]
+                                     )
 
                 yield summary
                 start += self.batch_size
@@ -250,7 +249,7 @@ class MixPolicy(policy):
     def __init__(self,
                  max_policy,
                  k=1,
-                 state_dim=41,
+                 state_dim=61,
                  log_path='model/logs/',
                  model_path='model/policy/latest.ckpt',
                  is_continuing=False,
@@ -292,9 +291,9 @@ class MixPolicy(policy):
         with self.graph.as_default():
 
             self.pi = Policy_net('mix_policy', self.sess, k * state_dim, max_policy, trainable=True)
-            self.old_pi = Policy_net('old_mix_policy', self.sess, k * state_dim, max_policy, trainable=False)
+            #self.old_pi = Policy_net('old_mix_policy', self.sess, k * state_dim, max_policy, trainable=False)
 
-            self.PPOTrain = PPOTrain('mix_policy_train', self.sess, self.pi, self.old_pi, max_policy=max_policy)
+            self.PPOTrain = PPOTrain('mix_policy_train', self.sess, self.pi, max_policy=max_policy)
 
             self.n_training = 0
 
@@ -318,9 +317,9 @@ class MixPolicy(policy):
     def get_policy(self, state, cur_policy_n):
         with self.sess.as_default():
             with self.graph.as_default():
-                policy, v = self.pi.get_act_v(state,cur_policy_n)
+                policy,mu_prob, v = self.pi.get_act_v(state,cur_policy_n)
 
-        return policy, v
+        return policy,mu_prob, v
 
     def save_transition(self, obs, next_obs, policy, reward, v, done, t, cur_policy_n):
         """
@@ -359,7 +358,7 @@ class MixPolicy(policy):
 
                 # compute the v of last obs
                 # this obs was missed when done==True
-                policy, v = self.get_policy(np.hstack((obs[int(self.state_dim/self.k) :], next_obs)), cur_policy_n)
+                policy, mu_prob, v = self.get_policy(np.hstack((obs[int(self.state_dim/self.k) :], next_obs)), cur_policy_n)
                 traj_v_next = self.traj_v[1:] + [v]
                 traj_reward = self.traj_reward.copy()
                 traj_v = self.traj_v.copy()
@@ -393,7 +392,7 @@ class MixPolicy(policy):
         self.gaes_memory = np.array([]).astype(np.float32)
         self.v_next_memory = []
 
-    def train(self, observations, policys, gaes, rewards, v_preds_next, cur_policy_n):
+    def train(self, observations, policys, gaes, rewards, v_preds_next, cur_policy_n, mu_probs):
 
         with self.sess.as_default():
             with self.graph.as_default():
@@ -404,8 +403,9 @@ class MixPolicy(policy):
                 gae = np.hstack(gaes).astype(np.float32)
                 reward = np.hstack(rewards).astype(dtype=np.float32)
                 v_pred_next = np.hstack(v_preds_next).astype(dtype=np.float32)
+                mu_probs = np.hstack(mu_probs).astype(dtype=np.float32)
 
-                for s in self.PPOTrain.ppo_train(observation, policy, reward, gae, v_pred_next, cur_policy_n):
+                for s in self.PPOTrain.ppo_train(observation, policy, reward, gae, v_pred_next, cur_policy_n, mu_probs):
                     self.summary.add_summary(s, self.n_training)
                     self.n_training += 1
 

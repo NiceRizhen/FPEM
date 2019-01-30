@@ -38,6 +38,8 @@ class Game():
         # Game env list
         self.xlen = xlen
         self.ylen = ylen
+        self.x_bound = self.xlen + 1
+        self.y_bound = self.ylen + 1
         self.space = np.zeros([self.xlen + 2, self.ylen + 2], dtype=np.int32)
 
         self.x1, self.x2, self.y1, self.y2 = 1,1,1,1
@@ -51,7 +53,7 @@ class Game():
         x = self.x1
         y = self.y1
 
-        obs1 = np.zeros([8,5])
+        obs1 = np.zeros([12,5])
         obs1[0, sp[x-1,y-1]] = 1
         obs1[1, sp[x-1,y]]   = 1
         obs1[2, sp[x-1,y+1]] = 1
@@ -61,11 +63,21 @@ class Game():
         obs1[6, sp[x+1,y]]   = 1
         obs1[7, sp[x+1,y+1]] = 1
 
+        if x-2 >= 0:
+            obs1[8, sp[x-2, y]] = 1
+        if x+2 <= self.x_bound:
+            obs1[9, sp[x+2, y]] = 1
+        if y-2 >= 0:
+            obs1[10, sp[x, y-2]] = 1
+        if y+2 <= self.y_bound:
+            obs1[11, sp[x, y+2]] = 1
+
         obs1 = obs1.flatten()
 
         x = self.x2
         y = self.y2
-        obs2 = np.zeros([8,5])
+
+        obs2 = np.zeros([12,5])
         obs2[0, sp[x-1,y-1]] = 1
         obs2[1, sp[x-1,y]]   = 1
         obs2[2, sp[x-1,y+1]] = 1
@@ -75,6 +87,14 @@ class Game():
         obs2[6, sp[x+1,y]]   = 1
         obs2[7, sp[x+1,y+1]] = 1
 
+        if x-2 >= 0:
+            obs2[8, sp[x-2, y]] = 1
+        if x+2 <= self.x_bound:
+            obs2[9, sp[x+2, y]] = 1
+        if y-2 >= 0:
+            obs2[10, sp[x, y-2]] = 1
+        if y+2 <= self.y_bound:
+            obs2[11, sp[x, y+2]] = 1
         obs2 = obs2.flatten()
 
         if self.who_takes_it == 0:
@@ -126,6 +146,20 @@ class Game():
         return x, y
 
     def step(self, a1, a2):
+        #
+        # is_1_step = -1
+        # sp = self.space
+        # x = self.x1
+        # y = self.y1
+        #
+        # if sp[x-1, y] == TREASURE:
+        #     is_1_step =MOVE_UP
+        # if sp[x+1,y] == TREASURE:
+        #     is_1_step = MOVE_DOWN
+        # if sp[x, y-1] == TREASURE:
+        #     is_1_step = MOVE_LEFT
+        # if sp[x, y+1] == TREASURE:
+        #     is_1_step = MOVE_RIGHT
 
         r1, r2 = 0, 0
 
@@ -239,7 +273,7 @@ class Game():
 
         s1 , s2 = self.get_obs()
 
-        return s1,s2,r1,r2,done
+        return s1,s2,r1,r2,done#, is_1_step
 
     def reset(self):
 
@@ -327,11 +361,11 @@ class Game():
             i += 1
 
         # init player1
-        x = random.randint(1, self.xlen-1)
+        x = random.randint(1, self.xlen)
         y = random.randint(1, self.ylen)
 
         while self.space[x,y]==WALL:
-            x = random.randint(1, self.xlen-1)
+            x = random.randint(1, self.xlen)
             y = random.randint(1, self.ylen)
 
         self.x1 = x
@@ -342,7 +376,7 @@ class Game():
         x = random.randint(1, self.xlen)
         y = random.randint(1, self.ylen)
 
-        while self.space[x,y]==WALL or self.space[x,y] == OPPONENT or x <= self.x1:
+        while self.space[x,y]==WALL or self.space[x,y] == OPPONENT:
             x = random.randint(1, self.xlen)
             y = random.randint(1, self.ylen)
 
@@ -373,4 +407,5 @@ class Game():
 
         self.space[x, y] = TREASURE
 
-        return self.get_obs(), self.space
+        # return space and pos for visiable
+        return self.get_obs(), self.space#, [self.x1, self.y1, self.x2, self.y2]
