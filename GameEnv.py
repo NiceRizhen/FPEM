@@ -3,13 +3,12 @@
  There are two players aim for finding 2 treasures in the grid world.
  You can visualize the env vid run code in visualization.py.
 
- @Author: Jingcheng Pang
+ @Author: pjc.
 
 '''
 
-import numpy as np
 import random
-import math
+import numpy as np
 
 # action space:
 MOVE_UP    = 0
@@ -17,9 +16,31 @@ MOVE_DOWN  = 1
 MOVE_LEFT  = 2
 MOVE_RIGHT = 3
 
+INIT_MAP = [
+[[3, 4], [3, 5], [3, 6], [5, 4], [6, 3], [6, 4], [6, 7], [7, 7], [8, 7]] ,
+[[3, 2], [3, 3], [4, 2], [5, 4], [5, 5], [6, 4], [7, 8], [8, 7], [8, 8]] ,
+[[2, 5], [3, 5], [4, 5], [5, 3], [5, 4], [5, 5], [6, 7], [7, 6], [7, 7]] ,
+[[1, 1], [2, 1], [2, 2], [3, 3], [4, 2], [4, 3], [6, 3], [7, 2], [7, 3]] ,
+[[1, 7], [1, 8], [2, 7], [3, 5], [4, 5], [5, 5], [8, 2], [8, 3], [8, 4]] ,
+[[2, 3], [2, 4], [2, 5], [2, 7], [3, 7], [3, 8], [4, 6], [5, 6], [6, 6]] ,
+[[1, 3], [1, 4], [2, 3], [2, 4], [2, 5], [3, 4], [4, 7], [4, 8], [5, 7]] ,
+[[2, 2], [2, 3], [3, 1], [3, 2], [4, 1], [5, 1], [6, 3], [6, 4], [7, 3]] ,
+[[1, 5], [1, 6], [2, 5], [4, 5], [4, 6], [5, 6], [8, 6], [8, 7], [8, 8]] ,
+[[2, 6], [3, 5], [3, 6], [5, 2], [5, 3], [5, 4], [5, 7], [6, 7], [6, 8]] ,
+[[1, 7], [1, 8], [2, 1], [2, 7], [3, 1], [3, 2], [8, 5], [8, 6], [8, 7]] ,
+[[2, 2], [3, 2], [3, 3], [3, 4], [3, 7], [3, 8], [4, 4], [4, 8], [5, 4]] ,
+[[2, 5], [2, 6], [2, 7], [6, 2], [6, 3], [6, 4], [6, 7], [6, 8], [7, 8]] ,
+[[3, 3], [3, 4], [3, 5], [5, 4], [5, 5], [5, 6], [7, 3], [7, 4], [8, 3]] ,
+[[1, 4], [2, 4], [2, 5], [4, 2], [5, 2], [5, 3], [5, 4], [5, 5], [6, 4]] ,
+[[1, 2], [1, 3], [1, 4], [5, 4], [6, 4], [7, 4], [7, 6], [8, 5], [8, 6]] ,
+[[3, 4], [4, 4], [5, 4], [6, 4], [7, 1], [7, 4], [7, 5], [8, 1], [8, 2]] ,
+[[3, 4], [3, 5], [3, 6], [3, 7], [4, 7], [4, 8], [6, 5], [7, 5], [7, 6]] ,
+[[2, 2], [2, 8], [3, 2], [3, 3], [3, 4], [3, 7], [3, 8], [4, 3], [4, 4]] ,
+[[2, 5], [3, 5], [4, 5], [5, 5], [6, 5], [7, 5], [7, 6], [7, 7], [8, 6]]]
+
 '''
-  For state, we set 0 for ground, 1 for wall, 
-  2 for opponent, 3 for treasure, 4 for opponent with treasure
+  For unit above the ground, we set 0 for ground, 1 for wall, 
+  2 for opponent, 3 for treasure, 4 for opponent with treasure.
 '''
 GROUND   = 0
 WALL     = 1
@@ -146,22 +167,8 @@ class Game():
         return x, y
 
     def step(self, a1, a2):
-        #
-        # is_1_step = -1
-        # sp = self.space
-        # x = self.x1
-        # y = self.y1
-        #
-        # if sp[x-1, y] == TREASURE:
-        #     is_1_step =MOVE_UP
-        # if sp[x+1,y] == TREASURE:
-        #     is_1_step = MOVE_DOWN
-        # if sp[x, y-1] == TREASURE:
-        #     is_1_step = MOVE_LEFT
-        # if sp[x, y+1] == TREASURE:
-        #     is_1_step = MOVE_RIGHT
 
-        r1, r2 = 0, 0
+        r1 = 0
 
         x, y = self.move(self.x1, self.y1, a1)
         self.x1 = x
@@ -184,19 +191,16 @@ class Game():
             elif  self.treasure_n == 1:
                 if self.who_takes_it == 1:
                     self.who_takes_it = 2
-                    r2 = 1
-                    r1 = -1
+                    r1 = -2
                 elif self.who_takes_it == 2:
                     self.who_takes_it = 1
-                    r1 = 1
-                    r2 = -1
+                    r1 = 2
 
             # nothing happens
             else:
                 pass
 
             self.space[self.x1, self.y1] = OPPONENT
-
 
         # they don't walk into the same grid
         else:
@@ -213,10 +217,8 @@ class Game():
                 if self.treasure_n == 1:
                     if self.who_takes_it == 1:
                         r1 = 2
-                        r2 = -2
                     else:
                         r1 += 1
-                        r2 -= 1
 
                     self.treasure_n -= 1
                     self.space[self.x1, self.y1] = OPPONENT
@@ -224,7 +226,6 @@ class Game():
 
                 else:
                     r1 = 1
-                    r2 = -1
                     self.who_takes_it = 1
                     self.treasure_n -= 1
 
@@ -235,10 +236,8 @@ class Game():
             elif self.space[self.x2, self.y2] == TREASURE:
                 if self.treasure_n == 1:
                     if self.who_takes_it == 2:
-                        r2 = 2
                         r1 = -2
                     else:
-                        r2 = 1
                         r1 = -1
 
                     self.treasure_n -= 1
@@ -246,7 +245,6 @@ class Game():
                     self.space[self.x2, self.y2] = OPPONENT
 
                 else:
-                    r2 = 1
                     r1 = -1
                     self.who_takes_it = 2
                     self.treasure_n -= 1
@@ -272,8 +270,9 @@ class Game():
             done = True
 
         s1 , s2 = self.get_obs()
+        r2 = -r1
 
-        return s1,s2,r1,r2,done#, is_1_step
+        return s1,s2,r1,r2,done
 
     def reset(self):
 
@@ -288,77 +287,9 @@ class Game():
         self.space[:, 0] = WALL
         self.space[:, self.ylen+1] = WALL
 
-        # init mid wall
-        i = 0
-        while i < 3:
-
-            x = random.randint(1, self.xlen)
-            y = random.randint(1, self.ylen)
-
-            # create line wall
-            if random.randint(0,1) == LINE:
-
-                form = random.randint(0,1)
-                if form is 0:
-                    while self.space[x,y] == WALL or self.space[x,y-1] == WALL or self.space[x,y+1] == WALL:
-                        x = random.randint(1, self.xlen)
-                        y = random.randint(1, self.ylen)
-
-                    self.space[x, y-1] = WALL
-                    self.space[x, y] = WALL
-                    self.space[x, y+1] = WALL
-
-                else:
-                    while self.space[x-1,y] == WALL or self.space[x,y] == WALL or self.space[x+1,y] == WALL:
-                        x = random.randint(1, self.xlen)
-                        y = random.randint(1, self.ylen)
-
-                    self.space[x-1, y] = WALL
-                    self.space[x, y] = WALL
-                    self.space[x+1, y] = WALL
-
-            # create curve wall
-            else:
-
-                form = random.randint(0,3)
-
-                if form == 0:
-                    while self.space[x+1, y] == WALL or self.space[x, y] == WALL or self.space[x, y+1] == WALL:
-                        x = random.randint(1, self.xlen)
-                        y = random.randint(1, self.ylen)
-
-                    self.space[x+1, y] = WALL
-                    self.space[x, y] = WALL
-                    self.space[x , y+1] = WALL
-
-                elif form == 1:
-                    while self.space[x+1, y] == WALL or self.space[x, y] == WALL or self.space[x, y-1] == WALL:
-                        x = random.randint(1, self.xlen)
-                        y = random.randint(1, self.ylen)
-
-                    self.space[x+1, y] = WALL
-                    self.space[x, y] = WALL
-                    self.space[x, y-1] = WALL
-
-                elif form == 2:
-                    while self.space[x-1, y] == WALL or self.space[x, y] == WALL or self.space[x, y+1] == WALL:
-                        x = random.randint(1, self.xlen)
-                        y = random.randint(1, self.ylen)
-
-                    self.space[x-1, y] = WALL
-                    self.space[x, y] = WALL
-                    self.space[x, y+1] = WALL
-
-                else:
-                    while self.space[x-1, y] == WALL or self.space[x, y] == WALL or self.space[x, y-1] == WALL:
-                        x = random.randint(1, self.xlen)
-                        y = random.randint(1, self.ylen)
-
-                    self.space[x-1, y] = WALL
-                    self.space[x, y] = WALL
-                    self.space[x, y-1] = WALL
-
-            i += 1
+        map = INIT_MAP[random.randint(0,19)]
+        for pos in map:
+            self.space[pos[0], pos[1]] = WALL
 
         # init player1
         x = random.randint(1, self.xlen)
@@ -407,5 +338,4 @@ class Game():
 
         self.space[x, y] = TREASURE
 
-        # return space and pos for visiable
-        return self.get_obs(), self.space#, [self.x1, self.y1, self.x2, self.y2]
+        return self.get_obs(), self.space

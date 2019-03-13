@@ -11,6 +11,7 @@ import tkinter as tk
 from GameEnv import Game
 from PPOPolicy import PPOPolicy
 from RandomPolicy import RandomPolicy
+from MixPolicyBP import MixPolicy
 
 # visualization params
 UNIT   = 40
@@ -24,7 +25,7 @@ OPPONENT = 2
 TREASURE = 3
 
 class Maze(tk.Tk, object):
-    def __init__(self, space):
+    def __init__(self, space, pos):
         super(Maze, self).__init__()
         self.action_space = ['u', 'd', 'l', 'r']
         self.n_actions = len(self.action_space)
@@ -32,9 +33,9 @@ class Maze(tk.Tk, object):
         self.geometry('{0}x{1}'.format(MAZE_H * UNIT, MAZE_H * UNIT))
         self.wall = []
         self.treasure = []
-        self._build_maze(space)
+        self._build_maze(space, pos)
 
-    def _build_maze(self, space):
+    def _build_maze(self, space, pos):
         self.wall = []
         self.canvas = tk.Canvas(self, bg='white',
                            height=MAZE_H * UNIT,
@@ -73,8 +74,7 @@ class Maze(tk.Tk, object):
 
                 # create players
                 elif space[x, y] == OPPONENT:
-                    if player is 0:
-                        player += 1
+                    if x == pos[0] and y == pos[1]:
                         rect_center = origin + np.array([UNIT * y, UNIT * x])
                         self.player1 = self.canvas.create_rectangle(
                             rect_center[0] - 15, rect_center[1] - 15,
@@ -86,6 +86,9 @@ class Maze(tk.Tk, object):
                             rect_center[0] - 15, rect_center[1] - 15,
                             rect_center[0] + 15, rect_center[1] + 15,
                             fill='blue')
+                #
+                # self.text = self.canvas.create_text(
+                #     200,20, text='0',font = "time 30", fill='white')
 
         # pack all
         self.canvas.pack()
@@ -150,42 +153,9 @@ class Maze(tk.Tk, object):
             self.canvas.itemconfig(self.player1, fill='red', width = 0)
             self.canvas.itemconfig(self.player2, fill='yellow', outline='blue', width=10)
 
+        # self.canvas.itemconfig(self.text, text="{0}".format(choose_who+1), fill = 'black')
 
     def render(self):
-        time.sleep(0.15)
+        time.sleep(0.25)
         self.update()
 
-if __name__ == '__main__':
-    space = []
-
-    ga = Game(8,8)
-
-    pi_random = PPOPolicy(is_training=False, model_path='model/1-3(150000)/0.ckpt', k=4)
-    pi_ppo = PPOPolicy(is_training=False, model_path='model/2-3(150000)/2.ckpt', k=4)
-
-    while True:
-        s, space = ga.reset()
-        s1 = s[0]
-        s2 = s[1]
-        env = Maze(space)
-        t = 0
-        while True:
-            env.render()
-            a1 = pi_random.choose_action(s1)
-            a2 = pi_ppo.choose_action(s2)
-            env.step(a1, a2, ga.who_takes_it)
-
-            s1_,s2_,r1,r2,done = ga.step(a1,a2)
-
-            s1 = s1_
-            s2 = s2_
-            t += 1
-            if t > 100:
-                break
-
-            if done:
-                env.render()
-                time.sleep(0.2)
-                break
-
-        env.destroy()

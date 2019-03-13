@@ -16,7 +16,7 @@ import numpy as np
 from MixPolicyBP import MixPolicy
 from GameEnv import Game
 from collections import deque
-from PPOIS import PPOIS
+from PPO.PPOIS import PPOIS
 from multiprocessing import Process, Manager, Lock
 
 # params for mix policy training
