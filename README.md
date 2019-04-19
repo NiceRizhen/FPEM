@@ -1,4 +1,4 @@
 # FPEM-- Fictitious Play with Expanding Model
-python MixPolicy.py : mix policy by action;  </br></br>
-python MixPolicyBP.py : mix policy by policy.</br></br>
+sh ./play_vs_ai.sh play a full-game with trained ai with partly observations </br></br>
+sh ./run.sh : for specific method.</br></br>
 model will be save at "model/"
